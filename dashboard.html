@@ -7,7 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;max-width:100vw;overflow-x:hidden;background:#08080f;color:#e8e8f0;font-family:'DM Sans',sans-serif}
+html,body{width:100%;max-width:100%;overflow-x:hidden;background:#08080f;color:#e8e8f0;font-family:'DM Sans',sans-serif}
 :root{--accent:#7c3aed;--neon:#06d6a0;--warn:#f59e0b;--danger:#ef4444;--card:#12121e;--border:rgba(124,58,237,0.2);--mono:'JetBrains Mono',monospace}
  
 /* LOGIN */
@@ -22,7 +22,7 @@ html,body{width:100%;max-width:100vw;overflow-x:hidden;background:#08080f;color:
 .login-err{color:var(--danger);font-size:12px;margin-top:8px;display:none}
  
 /* APP */
-#app{display:none;width:100%;max-width:100vw}
+#app{display:none;width:100%;max-width:100%;overflow-x:hidden}
  
 /* HEADER */
 .hdr{background:var(--card);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;width:100%}
@@ -38,7 +38,7 @@ html,body{width:100%;max-width:100vw;overflow-x:hidden;background:#08080f;color:
 .body{padding:14px;width:100%}
  
 /* STATS */
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;width:100%}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;width:100%;max-width:100%}
 .scard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;position:relative;overflow:hidden;width:100%}
 .scard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--c1,#06d6a0),var(--c2,#00f5c3))}
 .slabel{font-size:10px;font-weight:700;letter-spacing:.8px;color:#8888aa;text-transform:uppercase;margin-bottom:6px}
@@ -46,10 +46,10 @@ html,body{width:100%;max-width:100vw;overflow-x:hidden;background:#08080f;color:
 .ssub{font-size:10px;color:#8888aa;margin-top:4px;font-family:var(--mono)}
  
 /* SECTION */
-.sec-title{font-size:11px;font-weight:700;letter-spacing:.8px;color:#8888aa;text-transform:uppercase;margin-bottom:10px}
+.sec-title{font-size:11px;font-weight:700;letter-spacing:.8px;color:#8888aa;text-transform:uppercase;margin-bottom:10px;width:100%;overflow:hidden}
  
 /* LOCAL CARD */
-.lcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;width:100%}
+.lcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;width:100%;overflow:hidden}
 .lcard-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
 .lcard-name{font-size:13px;font-weight:700}
 .badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px}
@@ -62,7 +62,7 @@ html,body{width:100%;max-width:100vw;overflow-x:hidden;background:#08080f;color:
 .lcard-sync{font-size:10px;color:#8888aa;margin-top:8px;font-family:var(--mono)}
  
 /* VENTAS */
-.vcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;width:100%}
+.vcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;width:100%;overflow:hidden}
 .vitem{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(124,58,237,.1)}
 .vitem:last-child{border-bottom:none}
 .vlocal{font-size:11px;color:var(--accent);font-weight:700}
@@ -73,7 +73,7 @@ html,body{width:100%;max-width:100vw;overflow-x:hidden;background:#08080f;color:
 .btn-ref{width:100%;padding:13px;border-radius:12px;border:1px solid var(--border);background:rgba(124,58,237,.08);color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:16px}
  
 /* EMPTY */
-.empty{text-align:center;padding:20px;color:#8888aa;font-size:13px}
+.empty{text-align:center;padding:20px;color:#8888aa;font-size:13px;width:100%;word-break:break-word}
  
 /* FOOTER */
 .foot{text-align:center;font-size:10px;color:#444466;font-family:var(--mono);padding-bottom:20px}
