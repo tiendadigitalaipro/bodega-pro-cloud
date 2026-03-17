@@ -8,8 +8,8 @@ El resaltado de sintaxis se ha deshabilitado debido al tamaño del código.
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Bodega Pro v8.0 — A2K Digital Studio</title>
-<script src="./Bodega Pro v8.0 — A2K Digital Studio_files/chart.js.descarga"></script>
-<link href="./Bodega Pro v8.0 — A2K Digital Studio_files/css2" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 /* ═══════════════════════════════════════════════
    VARIABLES & RESET
@@ -604,20 +604,25 @@ canvas{max-width:100%!important}
   };
 
   window.syncVentasCloud = async function() {
-    if (!window.DB) return;
+    if (!window.DB) { _mostrarCloudBadge('⚠️ Base de datos no lista'); return; }
     var ventas = DB.get('ventas') || [];
     var cfg = DB.get('config') || {};
     var negocio = (cfg.negocio || (STATE && STATE.user ? STATE.user.negocio : 'negocio') || 'local').replace(/\s+/g,'_').toLowerCase();
-    if (ventas.length > 0) {
-      var ok = await window.cloudSave('negocios', negocio, {
-        ventas: ventas,
-        productos: DB.get('productos') || [],
-        clientes: DB.get('clientes') || [],
-        caja: DB.get('caja_estado') || {},
-        localId: negocio,
-        ultimaSync: new Date().toISOString()
-      });
-      if (ok) { console.log('✅ Sync OK —', negocio); _mostrarCloudBadge('✅ Nube sincronizada'); }
+    if (ventas.length === 0) { _mostrarCloudBadge('ℹ️ Sin ventas para sincronizar'); return; }
+    _mostrarCloudBadge('⏳ Sincronizando...');
+    var ok = await window.cloudSave('negocios', negocio, {
+      ventas: ventas,
+      productos: DB.get('productos') || [],
+      clientes: DB.get('clientes') || [],
+      caja: DB.get('caja_estado') || {},
+      localId: negocio,
+      ultimaSync: new Date().toISOString()
+    });
+    if (ok) {
+      console.log('✅ Sync OK —', negocio);
+      _mostrarCloudBadge('✅ Nube sincronizada');
+    } else {
+      _mostrarCloudBadge('❌ Error al sincronizar');
     }
   };
 
@@ -3952,7 +3957,7 @@ var HW = {
   impresora:  { estado:'offline', port:null },
   gaveta:     { estado:'offline', port:null },
   balanza:    { estado:'offline', port:null, peso:0, reader:null },
-  microserver:{ url:'http://localhost:9100', disponible:false },
+  microserver:{ url:'', disponible:false },
 };
 
 function initHardwareUI() {
@@ -3963,7 +3968,8 @@ function initHardwareUI() {
     hwBadge('gaveta','Gaveta') +
     hwBadge('balanza','Balanza') +
     hwBadge('microserver','Servidor Local');
-  verificarMicroServer();
+  // verificarMicroServer() removido del auto-init para evitar error CONNECTION_REFUSED
+  // El badge sigue siendo clickeable para verificar manualmente
 }
 
 function hwBadge(id, label) {
@@ -4315,7 +4321,7 @@ function _mostrarModalMicroServer() {
     +'Contacta a A2K Digital Studio:<br>'
     +'<strong style="color:var(--neon)">+58 416 411 7331</strong> (WhatsApp)<br>'
     +'<strong style="color:var(--accent)"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="95f4a7fef1fcf2fce1f4f9e6e1e0f1fcfaa7a5a7a0d5f2f8f4fcf9bbf6faf8">[email&#160;protected]</a></strong><br><br>'
-    +'Puerto: <strong style="color:var(--neon);font-family:var(--mono)">localhost:9100</strong>'
+    +''
     +'</div></div>'
     +'<div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:10px;padding:11px;font-size:12px;color:var(--text2)">'
     +'Sin servidor: Bodega Pro funciona completo para ventas, inventario y reportes.'
