@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Dashboard Dueño — Bodega Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;max-width:100%;overflow-x:hidden;background:#08080f;color:#e8e8f0;font-family:'DM Sans',sans-serif}
+:root{--accent:#7c3aed;--neon:#06d6a0;--warn:#f59e0b;--danger:#ef4444;--card:#12121e;--border:rgba(124,58,237,0.2);--mono:'JetBrains Mono',monospace}
+ 
+/* LOGIN */
+#login{position:fixed;inset:0;background:#08080f;display:flex;align-items:center;justify-content:center;padding:20px;z-index:999}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:340px;text-align:center}
+.login-icon{font-size:48px;margin-bottom:12px}
+.login-title{font-size:22px;font-weight:800;margin-bottom:4px}
+.login-title span{color:var(--accent)}
+.login-sub{font-size:13px;color:#8888aa;margin-bottom:20px}
+.login-input{width:100%;background:#0f0f1a;border:1px solid var(--border);color:#e8e8f0;padding:12px;border-radius:10px;font-size:16px;text-align:center;letter-spacing:3px;outline:none;margin-bottom:12px;font-family:var(--mono)}
+.login-btn{width:100%;padding:13px;border-radius:10px;border:none;background:linear-gradient(135deg,#7c3aed,#9d5bf4);color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.login-err{color:var(--danger);font-size:12px;margin-top:8px;display:none}
+ 
+/* APP */
+#app{display:none;width:100%;max-width:100%;overflow-x:hidden}
+ 
+/* HEADER */
+.hdr{background:var(--card);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;width:100%}
+.hdr-brand{display:flex;align-items:center;gap:10px}
+.hdr-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#06d6a0);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.hdr-title{font-size:16px;font-weight:800}
+.hdr-title span{color:var(--accent)}
+.hdr-live{display:flex;align-items:center;gap:5px;font-size:11px;color:#8888aa}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--neon);animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+ 
+/* BODY */
+.body{padding:14px;width:100%}
+ 
+/* STATS */
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;width:100%;max-width:100%}
+.scard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;position:relative;overflow:hidden;width:100%}
+.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--c1,#06d6a0),var(--c2,#00f5c3))}
+.slabel{font-size:10px;font-weight:700;letter-spacing:.8px;color:#8888aa;text-transform:uppercase;margin-bottom:6px}
+.sval{font-family:var(--mono);font-size:20px;font-weight:700;line-height:1;word-break:break-all}
+.ssub{font-size:10px;color:#8888aa;margin-top:4px;font-family:var(--mono)}
+ 
+/* SECTION */
+.sec-title{font-size:11px;font-weight:700;letter-spacing:.8px;color:#8888aa;text-transform:uppercase;margin-bottom:10px;width:100%;overflow:hidden}
+ 
+/* LOCAL CARD */
+.lcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;width:100%;overflow:hidden}
+.lcard-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.lcard-name{font-size:13px;font-weight:700}
+.badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px}
+.badge-on{background:rgba(6,214,160,.15);color:var(--neon)}
+.badge-off{background:rgba(239,68,68,.15);color:var(--danger)}
+.lcard-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.lst{text-align:center}
+.lst-val{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--neon)}
+.lst-label{font-size:10px;color:#8888aa;margin-top:2px}
+.lcard-sync{font-size:10px;color:#8888aa;margin-top:8px;font-family:var(--mono)}
+ 
+/* VENTAS */
+.vcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:14px;width:100%;overflow:hidden}
+.vitem{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(124,58,237,.1)}
+.vitem:last-child{border-bottom:none}
+.vlocal{font-size:11px;color:var(--accent);font-weight:700}
+.vhora{font-size:11px;color:#8888aa}
+.vmonto{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--neon)}
+ 
+/* BTN */
+.btn-ref{width:100%;padding:13px;border-radius:12px;border:1px solid var(--border);background:rgba(124,58,237,.08);color:var(--accent);font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;margin-bottom:16px}
+ 
+/* EMPTY */
+.empty{text-align:center;padding:20px;color:#8888aa;font-size:13px;width:100%;word-break:break-word}
+ 
+/* FOOTER */
+.foot{text-align:center;font-size:10px;color:#444466;font-family:var(--mono);padding-bottom:20px}
+</style>
+</head>
+<body>
+ 
+<div id="login">
+  <div class="login-box">
+    <div class="login-icon">📊</div>
+    <div class="login-title">Dashboard <span>Dueño</span></div>
+    <div class="login-sub">Bodega Pro v8 · A2K Digital Studio</div>
+    <input type="password" id="pin" class="login-input" placeholder="••••••" maxlength="20"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">🔓 Entrar</button>
+    <div id="loginErr" class="login-err">❌ PIN incorrecto</div>
+  </div>
+</div>
+ 
+<div id="app">
+  <div class="hdr">
+    <div class="hdr-brand">
+      <div class="hdr-icon">📊</div>
+      <div class="hdr-title">Bodega <span>Pro</span> Cloud</div>
+    </div>
+    <div class="hdr-live">
+      <div class="live-dot"></div>
+      <span>En vivo</span>
+    </div>
+  </div>
+ 
+  <div class="body">
+    <div class="stats">
+      <div class="scard" style="--c1:#06d6a0;--c2:#00f5c3">
+        <div class="slabel">Ventas Hoy</div>
+        <div class="sval" id="sVentasHoy" style="color:var(--neon)">$0.00</div>
+        <div class="ssub" id="sCountHoy">0 trans.</div>
+      </div>
+      <div class="scard" style="--c1:#7c3aed;--c2:#9d5bf4">
+        <div class="slabel">Este Mes</div>
+        <div class="sval" id="sMes" style="color:var(--accent)">$0.00</div>
+        <div class="ssub" id="sCountMes">0 trans.</div>
+      </div>
+      <div class="scard" style="--c1:#f59e0b;--c2:#ef4444">
+        <div class="slabel">Locales</div>
+        <div class="sval" id="sLocales" style="color:var(--warn)">0</div>
+        <div class="ssub">activos</div>
+      </div>
+      <div class="scard" style="--c1:#3b82f6;--c2:#06d6a0">
+        <div class="slabel">Última Venta</div>
+        <div class="sval" id="sUltima" style="color:#3b82f6;font-size:16px">—</div>
+        <div class="ssub" id="sUltimaHora">—</div>
+      </div>
+    </div>
+ 
+    <div class="sec-title">🏪 Mis Locales</div>
+    <div id="locales"><div class="empty">Cargando...</div></div>
+ 
+    <div class="sec-title">🕐 Ventas Recientes</div>
+    <div class="vcard" id="ventas"><div class="empty">Cargando...</div></div>
+ 
+    <button class="btn-ref" onclick="cargar()">🔄 Actualizar</button>
+    <div class="foot">Bodega Pro v8 · A2K Digital Studio · Cloud Dashboard</div>
+  </div>
+</div>
+ 
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+ 
+const cfg = {
+  apiKey:"AIzaSyCfAh2-K5oe1XPVFvB4jbN62nSOTFq22jo",
+  authDomain:"bodega-pro-cloud.firebaseapp.com",
+  projectId:"bodega-pro-cloud",
+  storageBucket:"bodega-pro-cloud.firebasestorage.app",
+  messagingSenderId:"245806066684",
+  appId:"1:245806066684:web:e45935a6bbe96c9a17a079"
+};
+ 
+const app = initializeApp(cfg);
+const db = getFirestore(app);
+const PIN = 'zync2025';
+ 
+window.doLogin = function(){
+  var p = document.getElementById('pin').value;
+  if(p === PIN){
+    document.getElementById('login').style.display='none';
+    document.getElementById('app').style.display='block';
+    cargar(); escuchar();
+  } else {
+    var e=document.getElementById('loginErr');
+    e.style.display='block';
+    setTimeout(()=>e.style.display='none',2000);
+  }
+};
+ 
+window.cargar = async function(){
+  try{
+    var snap = await getDocs(collection(db,'negocios'));
+    var locales=[];
+    snap.forEach(d=>locales.push({id:d.id,...d.data()}));
+    render(locales);
+  }catch(e){
+    document.getElementById('locales').innerHTML='<div class="empty">⚠️ Error conectando</div>';
+  }
+};
+ 
+function escuchar(){
+  onSnapshot(collection(db,'negocios'),snap=>{
+    var locales=[];
+    snap.forEach(d=>locales.push({id:d.id,...d.data()}));
+    render(locales);
+  });
+}
+ 
+function render(locales){
+  var hoy=new Date().toISOString().slice(0,10);
+  var mes=new Date().toISOString().slice(0,7);
+  var th=0,ch=0,tm=0,cm=0,todas=[];
+ 
+  locales.forEach(l=>{
+    (l.ventas||[]).forEach(v=>{
+      var t=v.totalUSD||0;
+      if(v.fecha&&v.fecha.slice(0,10)===hoy){th+=t;ch++;}
+      if(v.fecha&&v.fecha.slice(0,7)===mes){tm+=t;cm++;}
+      todas.push({...v,lid:l.id});
+    });
+  });
+ 
+  todas.sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  var ult=todas[0];
+ 
+  document.getElementById('sVentasHoy').textContent='$'+th.toFixed(2);
+  document.getElementById('sCountHoy').textContent=ch+' trans.';
+  document.getElementById('sMes').textContent='$'+tm.toFixed(2);
+  document.getElementById('sCountMes').textContent=cm+' trans.';
+  document.getElementById('sLocales').textContent=locales.length;
+  if(ult){
+    document.getElementById('sUltima').textContent='$'+(ult.totalUSD||0).toFixed(2);
+    document.getElementById('sUltimaHora').textContent=new Date(ult.fecha).toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
+  }
+ 
+  // Locales
+  if(!locales.length){
+    document.getElementById('locales').innerHTML='<div class="empty">📭 Ningún local sincronizado aún</div>';
+  } else {
+    document.getElementById('locales').innerHTML=locales.map(l=>{
+      var vh=(l.ventas||[]).filter(v=>v.fecha&&v.fecha.slice(0,10)===hoy);
+      var tot=vh.reduce((s,v)=>s+(v.totalUSD||0),0);
+      var min=l.ultimaSync?Math.floor((Date.now()-new Date(l.ultimaSync))/60000):999;
+      var on=min<10;
+      var sync=l.ultimaSync?new Date(l.ultimaSync).toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}):'Sin sync';
+      return '<div class="lcard">'
+        +'<div class="lcard-top"><div class="lcard-name">🏪 '+l.id.replace(/_/g,' ').toUpperCase()+'</div>'
+        +'<div class="badge '+(on?'badge-on':'badge-off')+'">'+(on?'🟢 Online':'⚫ Offline')+'</div></div>'
+        +'<div class="lcard-stats">'
+        +'<div class="lst"><div class="lst-val">$'+tot.toFixed(2)+'</div><div class="lst-label">Hoy</div></div>'
+        +'<div class="lst"><div class="lst-val">'+vh.length+'</div><div class="lst-label">Ventas</div></div>'
+        +'<div class="lst"><div class="lst-val">'+(l.productos||[]).length+'</div><div class="lst-label">Productos</div></div>'
+        +'</div><div class="lcard-sync">🕐 Sync: '+sync+'</div></div>';
+    }).join('');
+  }
+ 
+  // Ventas recientes
+  var rec=todas.slice(0,10);
+  if(!rec.length){
+    document.getElementById('ventas').innerHTML='<div class="empty">📭 Sin ventas hoy</div>';
+  } else {
+    document.getElementById('ventas').innerHTML=rec.map(v=>{
+      var h=new Date(v.fecha).toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'});
+      return '<div class="vitem">'
+        +'<div><div class="vlocal">🏪 '+(v.lid||'').replace(/_/g,' ').toUpperCase()+'</div>'
+        +'<div class="vhora">'+h+' · '+(v.metodo||'—')+'</div></div>'
+        +'<div class="vmonto">$'+(v.totalUSD||0).toFixed(2)+'</div></div>';
+    }).join('');
+  }
+}
+</script>
+</body>
+</html>
