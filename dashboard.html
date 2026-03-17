@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Bodega Pro — Dashboard Dueño</title>
+<style>
+:root {
+  --bg: #08080f;
+  --card: #12121e;
+  --bg2: #0f0f1a;
+  --bg3: #161625;
+  --border: rgba(124,58,237,0.15);
+  --border2: rgba(124,58,237,0.3);
+  --text: #e8e8f0;
+  --text2: #8888aa;
+  --accent: #7c3aed;
+  --neon: #06d6a0;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --success: #10b981;
+  --mono: 'JetBrains Mono', monospace;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
+ 
+/* HEADER */
+.header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, #7c3aed, #06d6a0);
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.brand-title { font-size: 16px; font-weight: 800; }
+.brand-title span { color: var(--accent); }
+.status-dot {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text2);
+}
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+ 
+/* BODY */
+.body { padding: 16px; max-width: 480px; margin: 0 auto; }
+ 
+/* STAT CARDS */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--c1), var(--c2));
+}
+.stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: var(--text2); text-transform: uppercase; margin-bottom: 6px; }
+.stat-val { font-family: var(--mono); font-size: 22px; font-weight: 700; line-height: 1; }
+.stat-sub { font-size: 10px; color: var(--text2); margin-top: 4px; font-family: var(--mono); }
+ 
+/* LOCALES */
+.section-title { font-size: 13px; font-weight: 700; letter-spacing: 0.5px; color: var(--text2); text-transform: uppercase; margin-bottom: 10px; }
+.local-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+}
+.local-card:hover { border-color: var(--border2); }
+.local-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.local-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.local-badge {
+  font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+  background: rgba(6,214,160,0.15); color: var(--neon);
+}
+.local-badge.offline { background: rgba(239,68,68,0.15); color: var(--danger); }
+.local-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.local-stat { text-align: center; }
+.local-stat-val { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--neon); }
+.local-stat-label { font-size: 10px; color: var(--text2); margin-top: 2px; }
+.local-sync { font-size: 10px; color: var(--text2); margin-top: 8px; font-family: var(--mono); }
+ 
+/* VENTAS RECIENTES */
+.venta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.venta-item:last-child { border-bottom: none; }
+.venta-info { flex: 1; }
+.venta-local { font-size: 11px; color: var(--accent); font-weight: 700; }
+.venta-hora { font-size: 11px; color: var(--text2); }
+.venta-metodo { font-size: 11px; color: var(--text2); }
+.venta-monto { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--neon); }
+ 
+/* REFRESH BTN */
+.btn-refresh {
+  width: 100%; padding: 14px; border-radius: 12px;
+  border: 1px solid var(--border2);
+  background: rgba(124,58,237,0.08);
+  color: var(--accent);
+  font-size: 14px; font-weight: 700;
+  cursor: pointer;
+  margin-top: 16px;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+.btn-refresh:hover { background: rgba(124,58,237,0.15); }
+ 
+/* LOADING */
+.loading { text-align: center; padding: 40px 20px; color: var(--text2); }
+.spinner { width: 32px; height: 32px; border: 3px solid rgba(124,58,237,0.2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+ 
+/* EMPTY */
+.empty { text-align: center; padding: 30px 20px; color: var(--text2); font-size: 13px; }
+ 
+/* LOGIN */
+#loginPanel {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  z-index: 999;
+}
+.login-box {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 20px; padding: 28px; width: 100%; max-width: 360px;
+  text-align: center;
+}
+.login-icon { font-size: 48px; margin-bottom: 12px; }
+.login-title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.login-sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+.login-input {
+  width: 100%; background: var(--bg2); border: 1px solid var(--border2);
+  color: var(--text); padding: 12px 14px; border-radius: 10px;
+  font-size: 14px; outline: none; margin-bottom: 12px;
+  font-family: 'DM Sans', sans-serif; text-align: center; letter-spacing: 2px;
+}
+.login-btn {
+  width: 100%; padding: 13px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, #7c3aed, #9d5bf4);
+  color: #fff; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+}
+.login-error { color: var(--danger); font-size: 12px; margin-top: 8px; display: none; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+ 
+<!-- LOGIN -->
+<div id="loginPanel">
+  <div class="login-box">
+    <div class="login-icon">📊</div>
+    <div class="login-title">Dashboard <span style="color:var(--accent)">Dueño</span></div>
+    <div class="login-sub">Bodega Pro v8 · A2K Digital Studio</div>
+    <input type="password" id="ownerPin" class="login-input" placeholder="••••••" maxlength="20"
+      onkeydown="if(event.key==='Enter') loginOwner()">
+    <button class="login-btn" onclick="loginOwner()">🔓 Entrar al Dashboard</button>
+    <div id="loginError" class="login-error">❌ PIN incorrecto</div>
+  </div>
+</div>
+ 
+<!-- APP -->
+<div id="appPanel" style="display:none">
+  <div class="header">
+    <div class="header-brand">
+      <div class="brand-icon">📊</div>
+      <div>
+        <div class="brand-title">Bodega <span>Pro</span> Cloud</div>
+      </div>
+    </div>
+    <div class="status-dot">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">En vivo</span>
+    </div>
+  </div>
+ 
+  <div class="body">
+    <!-- Stats globales -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card" style="--c1:#06d6a0;--c2:#00f5c3">
+        <div class="stat-label">Ventas Hoy</div>
+        <div class="stat-val" id="totalVentasHoy" style="color:var(--neon)">$0.00</div>
+        <div class="stat-sub" id="countVentasHoy">0 transacciones</div>
+      </div>
+      <div class="stat-card" style="--c1:#7c3aed;--c2:#9d5bf4">
+        <div class="stat-label">Este Mes</div>
+        <div class="stat-val" id="totalMes" style="color:var(--accent)">$0.00</div>
+        <div class="stat-sub" id="countMes">0 transacciones</div>
+      </div>
+      <div class="stat-card" style="--c1:#f59e0b;--c2:#ef4444">
+        <div class="stat-label">Locales Activos</div>
+        <div class="stat-val" id="localesActivos" style="color:var(--warn)">0</div>
+        <div class="stat-sub">conectados</div>
+      </div>
+      <div class="stat-card" style="--c1:#3b82f6;--c2:#06d6a0">
+        <div class="stat-label">Última Venta</div>
+        <div class="stat-val" id="ultimaVentaMonto" style="color:var(--neonb,#3b82f6);font-size:16px">—</div>
+        <div class="stat-sub" id="ultimaVentaHora">—</div>
+      </div>
+    </div>
+ 
+    <!-- Locales -->
+    <div class="section-title">🏪 Mis Locales</div>
+    <div id="localesContainer">
+      <div class="loading"><div class="spinner"></div>Cargando locales...</div>
+    </div>
+ 
+    <!-- Ventas recientes -->
+    <div class="section-title" style="margin-top:16px">🕐 Ventas Recientes</div>
+    <div class="local-card" id="ventasRecientes">
+      <div class="loading"><div class="spinner"></div>Cargando ventas...</div>
+    </div>
+ 
+    <button class="btn-refresh" onclick="cargarDatos()">🔄 Actualizar datos</button>
+ 
+    <div style="text-align:center;font-size:10px;color:var(--text2);margin-top:16px;font-family:var(--mono)">
+      Bodega Pro v8 · A2K Digital Studio · Cloud Dashboard
+    </div>
+  </div>
+</div>
+ 
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getFirestore, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+ 
+const firebaseConfig = {
+  apiKey: "AIzaSyCfAh2-K5oe1XPVFvB4jbN62nSOTFq22jo",
+  authDomain: "bodega-pro-cloud.firebaseapp.com",
+  projectId: "bodega-pro-cloud",
+  storageBucket: "bodega-pro-cloud.firebasestorage.app",
+  messagingSenderId: "245806066684",
+  appId: "1:245806066684:web:e45935a6bbe96c9a17a079"
+};
+ 
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+ 
+// PIN del dueño — cámbialo por el tuyo
+const OWNER_PIN = 'zync2025';
+ 
+window.loginOwner = function() {
+  var pin = document.getElementById('ownerPin').value;
+  if (pin === OWNER_PIN) {
+    document.getElementById('loginPanel').style.display = 'none';
+    document.getElementById('appPanel').style.display = 'block';
+    cargarDatos();
+    iniciarListeners();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    setTimeout(() => document.getElementById('loginError').style.display = 'none', 2000);
+  }
+};
+ 
+window.cargarDatos = async function() {
+  try {
+    const snap = await getDocs(collection(db, 'negocios'));
+    var locales = [];
+    snap.forEach(doc => locales.push({ id: doc.id, ...doc.data() }));
+    renderDashboard(locales);
+  } catch(e) {
+    console.error('Error cargando datos:', e);
+    document.getElementById('localesContainer').innerHTML = '<div class="empty">⚠️ Error conectando con la nube</div>';
+  }
+};
+ 
+function iniciarListeners() {
+  // Escuchar cambios en tiempo real
+  onSnapshot(collection(db, 'negocios'), snap => {
+    var locales = [];
+    snap.forEach(doc => locales.push({ id: doc.id, ...doc.data() }));
+    renderDashboard(locales);
+  });
+}
+ 
+function renderDashboard(locales) {
+  var hoy = new Date().toISOString().slice(0,10);
+  var mesActual = new Date().toISOString().slice(0,7);
+  var totalHoy = 0, countHoy = 0, totalMes = 0, countMes = 0;
+  var todasVentas = [];
+ 
+  locales.forEach(local => {
+    var ventas = local.ventas || [];
+    ventas.forEach(v => {
+      var t = v.totalUSD || 0;
+      if (v.fecha && v.fecha.slice(0,10) === hoy) { totalHoy += t; countHoy++; }
+      if (v.fecha && v.fecha.slice(0,7) === mesActual) { totalMes += t; countMes++; }
+      todasVentas.push({ ...v, localId: local.id });
+    });
+  });
+ 
+  // Última venta
+  todasVentas.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+  var ultima = todasVentas[0];
+ 
+  // Stats globales
+  document.getElementById('totalVentasHoy').textContent = '$' + totalHoy.toFixed(2);
+  document.getElementById('countVentasHoy').textContent = countHoy + ' transacciones';
+  document.getElementById('totalMes').textContent = '$' + totalMes.toFixed(2);
+  document.getElementById('countMes').textContent = countMes + ' transacciones';
+  document.getElementById('localesActivos').textContent = locales.length;
+ 
+  if (ultima) {
+    document.getElementById('ultimaVentaMonto').textContent = '$' + (ultima.totalUSD||0).toFixed(2);
+    document.getElementById('ultimaVentaHora').textContent = new Date(ultima.fecha).toLocaleTimeString('es-VE', {hour:'2-digit',minute:'2-digit'});
+  }
+ 
+  // Locales
+  if (locales.length === 0) {
+    document.getElementById('localesContainer').innerHTML = '<div class="empty">📭 Ningún local ha sincronizado aún</div>';
+  } else {
+    var html = '';
+    locales.forEach(local => {
+      var ventas = local.ventas || [];
+      var ventasHoy = ventas.filter(v => v.fecha && v.fecha.slice(0,10) === hoy);
+      var totalLocalHoy = ventasHoy.reduce((s,v) => s + (v.totalUSD||0), 0);
+      var ultimaSync = local.ultimaSync ? new Date(local.ultimaSync).toLocaleTimeString('es-VE', {hour:'2-digit',minute:'2-digit'}) : 'Sin sync';
+      var minutos = local.ultimaSync ? Math.floor((Date.now() - new Date(local.ultimaSync)) / 60000) : 999;
+      var online = minutos < 10;
+      html += '<div class="local-card">'
+        + '<div class="local-header">'
+        + '<div class="local-name">🏪 ' + local.id.replace(/_/g,' ').toUpperCase() + '</div>'
+        + '<div class="local-badge ' + (online ? '' : 'offline') + '">' + (online ? '🟢 Online' : '⚫ Offline') + '</div>'
+        + '</div>'
+        + '<div class="local-stats">'
+        + '<div class="local-stat"><div class="local-stat-val">$' + totalLocalHoy.toFixed(2) + '</div><div class="local-stat-label">Hoy</div></div>'
+        + '<div class="local-stat"><div class="local-stat-val">' + ventasHoy.length + '</div><div class="local-stat-label">Ventas</div></div>'
+        + '<div class="local-stat"><div class="local-stat-val">' + (local.productos||[]).length + '</div><div class="local-stat-label">Productos</div></div>'
+        + '</div>'
+        + '<div class="local-sync">🕐 Última sync: ' + ultimaSync + '</div>'
+        + '</div>';
+    });
+    document.getElementById('localesContainer').innerHTML = html;
+  }
+ 
+  // Ventas recientes (últimas 10)
+  var recientes = todasVentas.slice(0, 10);
+  if (recientes.length === 0) {
+    document.getElementById('ventasRecientes').innerHTML = '<div class="empty">📭 Sin ventas registradas hoy</div>';
+  } else {
+    var html2 = recientes.map(v => {
+      var hora = new Date(v.fecha).toLocaleTimeString('es-VE', {hour:'2-digit',minute:'2-digit'});
+      return '<div class="venta-item">'
+        + '<div class="venta-info">'
+        + '<div class="venta-local">🏪 ' + (v.localId||'').replace(/_/g,' ').toUpperCase() + '</div>'
+        + '<div class="venta-hora">' + hora + ' · ' + (v.metodo||'—') + '</div>'
+        + '</div>'
+        + '<div class="venta-monto">$' + (v.totalUSD||0).toFixed(2) + '</div>'
+        + '</div>';
+    }).join('');
+    document.getElementById('ventasRecientes').innerHTML = html2;
+  }
+}
+</script>
+</body>
+</html>
