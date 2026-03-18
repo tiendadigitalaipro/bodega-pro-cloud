@@ -68,8 +68,8 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
   <div class="login-box">
     <div class="login-icon">🏪</div>
     <div class="login-title">Mi <span>Cuenta</span></div>
-    <div class="login-sub" id="loginSubtitle">Ingresa tu código de cliente</div>
-    <input type="text" id="negocioInput" class="input" placeholder="Nombre del negocio"
+    <div class="login-sub" id="loginSubtitle">Ingresa el nombre del negocio y tu PIN</div>
+    <input type="text" id="negocioInput" class="input" placeholder="Ej: ZYNC Electronics"
       style="text-align:center;margin-bottom:10px">
     <input type="password" id="pinInput" class="input" maxlength="4" placeholder="Tu PIN (4 dígitos)"
       oninput="this.value=this.value.replace(/\D/g,'')"
@@ -99,7 +99,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 const cfg = {
   apiKey:"AIzaSyCfAh2-K5oe1XPVFvB4jbN62nSOTFq22jo",
@@ -115,6 +115,22 @@ const db = getFirestore(app);
 var _clienteData = null;
 var _negocioData = null;
 
+// Genera todas las variantes posibles de un nombre de negocio
+function generarCandidatos(nombre) {
+  var base = nombre.trim();
+  var normalizado = base.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,'')
+    .trim();
+  var conGuion     = normalizado.replace(/\s+/g,'_');
+  var sinSeparador = normalizado.replace(/\s+/g,'');
+  var primeraWord  = conGuion.split('_')[0];
+  // Deduplicar manteniendo orden de preferencia
+  var todos = [conGuion, base.replace(/\s+/g,'_').toLowerCase(),
+               sinSeparador, primeraWord, base.toLowerCase()];
+  return todos.filter(function(v, i, arr){ return v && arr.indexOf(v) === i; });
+}
+
 window.accederCliente = async function() {
   var negocioRaw = document.getElementById('negocioInput').value.trim();
   var pin = document.getElementById('pinInput').value.trim();
@@ -126,14 +142,33 @@ window.accederCliente = async function() {
     err.style.display = 'block'; return;
   }
 
-  var negocioId = negocioRaw.toLowerCase().replace(/\s+/g,'_');
   try {
-    var snap = await getDoc(doc(db, 'negocios', negocioId));
-    if (!snap.exists()) {
-      err.textContent = '❌ Negocio no encontrado';
+    var data = null;
+
+    // 1. Intentar con cada variante del nombre como doc ID
+    var candidatos = generarCandidatos(negocioRaw);
+    for (var i = 0; i < candidatos.length; i++) {
+      var snap = await getDoc(doc(db, 'negocios', candidatos[i]));
+      if (snap.exists()) { data = snap.data(); break; }
+    }
+
+    // 2. Fallback: buscar en toda la colección por localId o nombre parcial
+    if (!data) {
+      var colSnap = await getDocs(collection(db, 'negocios'));
+      var termino = negocioRaw.toLowerCase().replace(/\s+/g,'');
+      colSnap.forEach(function(d) {
+        if (data) return;
+        var docData = d.data();
+        var lid = (docData.localId || d.id || '').toLowerCase().replace(/[^a-z0-9]/g,'');
+        if (lid.includes(termino) || termino.includes(lid)) data = docData;
+      });
+    }
+
+    if (!data) {
+      err.textContent = '❌ Negocio no encontrado. Verifica el nombre exacto.';
       err.style.display = 'block'; return;
     }
-    var data = snap.data();
+
     var clientes = data.clientes || [];
     var cliente = clientes.find(function(c){ return c.pin && c.pin === pin; });
     if (!cliente) {
