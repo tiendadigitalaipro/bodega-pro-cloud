@@ -2242,7 +2242,10 @@ async function doLogin() {
         }
         if (new Date(fbLic.fechaVencimiento) < new Date()) {
           var _fv = new Date(fbLic.fechaVencimiento).toLocaleDateString('es-VE');
-          showLoginAlert('⏰ Licencia vencida el ' + _fv + '. Renueva con A2K Digital Studio.', 'error');
+          var _expMsg = fbLic.tipo === 'DEMO'
+            ? '⏰ Tu prueba gratuita terminó. Contacta a A2K Digital Studio para adquirir tu licencia completa. 📱 +58 416 4117331'
+            : '⏰ Licencia vencida el ' + _fv + '. Renueva con A2K Digital Studio. 📱 +58 416 4117331';
+          showLoginAlert(_expMsg, 'error');
           return;
         }
         // ✅ Licencia Firebase válida — acceso concedido
