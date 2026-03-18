@@ -570,6 +570,24 @@ canvas{max-width:100%!important}
   .bento-item.span2,.bento-item.span3{grid-column:span 2}
   .bento-item.span4{grid-column:span 2}
 }
+/* ── ONLINE/OFFLINE INDICATOR ── */
+#netStatus{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;transition:all 0.4s}
+#netStatus.online{background:rgba(6,214,160,.15);color:var(--neon)}
+#netStatus.offline{background:rgba(239,68,68,.15);color:var(--danger)}
+#netDot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.online #netDot{background:var(--neon);animation:pulse 2s infinite}
+.offline #netDot{background:var(--danger)}
+/* ── USER PICKER ── */
+#modalUserPicker{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)}
+.user-pick-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;min-width:120px}
+.user-pick-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.user-pick-avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--neon));display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;margin:0 auto 8px}
+/* ── ALERTA FIADO ── */
+.fiado-alert{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+/* ── CIERRE DIARIO ── */
+.cierre-stat{background:var(--bg2);border-radius:10px;padding:14px;text-align:center}
+.cierre-stat-val{font-family:var(--mono);font-size:22px;font-weight:900;color:var(--neon)}
+.cierre-stat-lbl{font-size:11px;color:var(--text2);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
 </style>
 
 <!-- ═══ FIREBASE SDK ═══ -->
@@ -756,6 +774,9 @@ canvas{max-width:100%!important}
       <div class="nav-item" onclick="showPage(&#39;configuracion&#39;,this)" data-page="configuracion">
         <span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span>
       </div>
+      <div class="nav-item" id="navUsuarios" onclick="showPage(&#39;usuarios&#39;,this)" data-page="usuarios">
+        <span class="nav-icon">👤</span><span class="nav-label">Usuarios</span>
+      </div>
     </nav>
     <div class="sidebar-footer">
       <button class="sidebar-collapse-btn" onclick="toggleSidebar()">
@@ -777,6 +798,8 @@ canvas{max-width:100%!important}
         </div>
       </div>
       <div class="topbar-right">
+        <div id="netStatus" class="online" title="Estado de conexión"><div id="netDot"></div><span id="netStatusTxt">Online</span></div>
+        <button class="btn-icon" onclick="mostrarCierreDiario()" title="Cierre del Día" style="color:var(--warn)">📊</button>
         <button class="btn-icon" onclick="if(window.syncVentasCloud)syncVentasCloud()" title="Sincronizar con la nube" style="color:var(--neon)">☁️</button>
         <label class="theme-toggle" title="Cambiar tema">
           <input type="checkbox" id="themeToggle" onchange="toggleTheme(this)">
@@ -1110,6 +1133,29 @@ canvas{max-width:100%!important}
       </div>
 
       <!-- ═══ CONFIGURACIÓN ═══ -->
+      <!-- ═══ USUARIOS ═══ -->
+      <div id="page-usuarios" style="display:none">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <div class="section-title">Usuarios del Sistema</div>
+            <div class="section-sub" style="margin-bottom:0">Control de acceso y roles</div>
+          </div>
+          <button class="btn btn-primary" id="btnNuevoUsuario" onclick="openAddUsuario()">+ Nuevo Usuario</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Creado</th><th>Acciones</th></tr></thead>
+            <tbody id="usuariosTable"></tbody>
+          </table>
+        </div>
+        <div class="card mt-4" style="background:rgba(124,58,237,.06);border-color:rgba(124,58,237,.2)">
+          <div style="font-size:12px;color:var(--text2);line-height:1.8">
+            <strong style="color:var(--accent)">ADMIN</strong> — Acceso total al sistema<br>
+            <strong style="color:var(--neon)">CAJERO</strong> — Solo Punto de Venta e Inventario
+          </div>
+        </div>
+      </div>
+
       <div id="page-configuracion" style="display:none">
         <div class="section-title mb-4">Configuración</div>
         <div class="grid-2">
@@ -1618,6 +1664,87 @@ canvas{max-width:100%!important}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal(&#39;modalCliente&#39;)">Cancelar</button>
       <button class="btn btn-primary" onclick="saveCliente()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: USER PICKER -->
+<div id="modalUserPicker" style="display:none">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px;width:90%;max-width:480px;text-align:center">
+    <div style="font-size:36px;margin-bottom:8px">👋</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:4px">¿Quién eres?</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:24px">Selecciona tu usuario para continuar</div>
+    <div id="userPickerList" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center"></div>
+  </div>
+</div>
+
+<!-- MODAL: CONTRASEÑA USUARIO -->
+<div class="modal-overlay" id="modalUserPass" style="display:none">
+  <div class="modal" style="max-width:340px;text-align:center">
+    <div class="modal-header">
+      <span class="modal-title" id="userPassTitle">🔐 Contraseña</span>
+      <button class="btn-close" onclick="closeModal('modalUserPass')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="password" id="userPassInput" class="form-input" placeholder="Contraseña..."
+        onkeydown="if(event.key==='Enter')verificarUserPass()"
+        style="text-align:center;font-size:18px;letter-spacing:4px">
+      <div id="userPassError" style="color:var(--danger);font-size:12px;margin-top:8px;display:none">❌ Contraseña incorrecta</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modalUserPass')">Cancelar</button>
+      <button class="btn btn-primary" onclick="verificarUserPass()">Entrar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NUEVO/EDITAR USUARIO -->
+<div class="modal-overlay" id="modalUsuario" style="display:none">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <span class="modal-title" id="modalUsuarioTitle">Nuevo Usuario</span>
+      <button class="btn-close" onclick="closeModal('modalUsuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="usu-id">
+      <div class="form-group">
+        <label class="form-label">Nombre completo *</label>
+        <input type="text" id="usu-nombre" class="form-input" placeholder="Juan Pérez">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Usuario (login) *</label>
+        <input type="text" id="usu-usuario" class="form-input" placeholder="cajero1" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraseña *</label>
+        <input type="password" id="usu-pass" class="form-input" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rol</label>
+        <select id="usu-rol" class="form-select">
+          <option value="cajero">👷 Cajero — solo POS e Inventario</option>
+          <option value="admin">👑 Admin — acceso total</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modalUsuario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveUsuario()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CIERRE DIARIO -->
+<div class="modal-overlay" id="modalCierreDiario" style="display:none">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <span class="modal-title">📊 Cierre del Día</span>
+      <button class="btn-close" onclick="closeModal('modalCierreDiario')">✕</button>
+    </div>
+    <div class="modal-body" id="cierreDiarioBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modalCierreDiario')">Cerrar</button>
+      <button class="btn btn-primary" onclick="enviarCierreWhatsApp()" style="background:#25d366;border-color:#25d366">📱 Enviar por WhatsApp</button>
     </div>
   </div>
 </div>
@@ -6427,6 +6554,466 @@ window.confirmarCierreCaja   = confirmarCierreCaja;
 window.imprimirCierreCaja    = imprimirCierreCaja;
 window.compartirCierreWA     = compartirCierreWA;
 window._mostrarComprobanteCierre = _mostrarComprobanteCierre;
+
+// ═══════════════════════════════════════════════════════════════
+//  FEATURE 1 — MODO OFFLINE
+// ═══════════════════════════════════════════════════════════════
+function _actualizarIndicadorRed() {
+  var online = navigator.onLine;
+  var el = document.getElementById('netStatus');
+  var txt = document.getElementById('netStatusTxt');
+  if (!el) return;
+  el.className = online ? 'online' : 'offline';
+  if (txt) txt.textContent = online ? 'Online' : 'Offline';
+}
+
+function _syncPendientes() {
+  if (!navigator.onLine || !window.syncVentasCloud) return;
+  var pendientes = DB.get('ventas_pendientes') || [];
+  if (!pendientes.length) return;
+  // Mover pendientes a ventas principales
+  var ventas = DB.get('ventas') || [];
+  pendientes.forEach(function(v){ ventas.push(v); });
+  DB.set('ventas', ventas);
+  DB.del('ventas_pendientes');
+  window.syncVentasCloud();
+  showToast('✅ ' + pendientes.length + ' venta(s) sincronizada(s)', 'success');
+}
+
+window.addEventListener('online', function() {
+  _actualizarIndicadorRed();
+  _mostrarCloudBadge && _mostrarCloudBadge('🌐 Conexión restaurada');
+  setTimeout(_syncPendientes, 1500);
+});
+window.addEventListener('offline', function() {
+  _actualizarIndicadorRed();
+  _mostrarCloudBadge && _mostrarCloudBadge('📴 Sin internet — guardando local');
+});
+setTimeout(_actualizarIndicadorRed, 500);
+
+// Patch _ejecutarVenta para encolar si está offline
+var _ejecutarVentaOrig = window._ejecutarVenta || _ejecutarVenta;
+window._ejecutarVentaOfflinePatch = function(total, clienteId, notas) {
+  if (!navigator.onLine) {
+    // Guardar en cola offline
+    var pendientes = DB.get('ventas_pendientes') || [];
+    pendientes.push({
+      id: Date.now(), fecha: new Date().toISOString(),
+      items: STATE.cart.map(function(i){ return Object.assign({}, i); }),
+      totalUSD: total, totalBs: total * STATE.tasa,
+      metodo: STATE.payMethod === 'Pago Mixto' ? 'Pago Mixto' : STATE.payMethod,
+      pagos: STATE.payMethod === 'Pago Mixto' ? STATE.pagosMixtos.slice() : null,
+      cliente: clienteId, notas: notas, tasa: STATE.tasa, _pendiente: true
+    });
+    DB.set('ventas_pendientes', pendientes);
+    showToast('📴 Sin internet — venta guardada localmente', 'warn');
+    closeModal('modalCobro');
+    STATE.cart = []; STATE.pagosMixtos = [];
+    renderCart(); renderPosProducts();
+    return;
+  }
+  _ejecutarVenta(total, clienteId, notas);
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  FEATURE 2 — FACTURAS POR WHATSAPP
+// ═══════════════════════════════════════════════════════════════
+function generarMensajeVenta(venta) {
+  var cfg = DB.get('config') || {};
+  var negocio = cfg.negocio || (STATE.user && STATE.user.negocio) || 'Mi Negocio';
+  var simb = STATE.simboloLocal || 'Bs';
+  var lineas = ['🏪 *' + negocio + '*'];
+  lineas.push('📅 ' + new Date(venta.fecha).toLocaleString('es-VE'));
+  lineas.push('🧾 Recibo #' + String(venta.id).slice(-6));
+  lineas.push('─────────────────');
+  venta.items.forEach(function(it){
+    lineas.push('• ' + it.nombre + ' x' + it.qty + ' → $' + it.subtotal.toFixed(2));
+  });
+  lineas.push('─────────────────');
+  lineas.push('💵 *Total USD: $' + venta.totalUSD.toFixed(2) + '*');
+  lineas.push('💴 Total ' + simb + ': ' + simb + ' ' + (venta.totalBs || 0).toFixed(2));
+  lineas.push('💳 Método: ' + venta.metodo);
+  if (venta.pagos && venta.pagos.length) {
+    venta.pagos.forEach(function(p){ lineas.push('   · ' + p.metodo + ': $' + p.monto.toFixed(2)); });
+  }
+  lineas.push('─────────────────');
+  lineas.push((cfg.factura && cfg.factura.mensajePie) || '¡Gracias por su compra!');
+  return lineas.join('\n');
+}
+
+function enviarVentaWhatsApp(venta, telefono) {
+  var msg = generarMensajeVenta(venta);
+  var tel = (telefono || '').replace(/\D/g, '');
+  var url = tel ? 'https://wa.me/' + tel + '?text=' + encodeURIComponent(msg)
+                : 'https://wa.me/?text=' + encodeURIComponent(msg);
+  window.open(url, '_blank');
+}
+
+// Patch showRecibo para agregar botón WhatsApp
+var _showReciboOrig = window.showRecibo || showRecibo;
+function showReciboConWA(venta) {
+  _showReciboOrig(venta);
+  // Agregar botón WhatsApp al footer del modal
+  setTimeout(function(){
+    var overlay = document.getElementById('modalReciboCustom');
+    if (!overlay) return;
+    var footer = overlay.querySelector('[style*="display:flex;gap:10px"]') ||
+                 overlay.querySelectorAll('div')[overlay.querySelectorAll('div').length - 2];
+    if (!footer) return;
+    // Buscar teléfono del cliente si existe
+    var clienteId = venta.cliente;
+    var telefono = '';
+    if (clienteId) {
+      var clientes = DB.get('clientes') || [];
+      var c = clientes.find(function(x){ return x.id === clienteId; });
+      if (c && c.telefono) telefono = c.telefono;
+    }
+    var btnWA = document.createElement('button');
+    btnWA.innerHTML = '📱 WhatsApp';
+    btnWA.style.cssText = 'flex:2;padding:11px;border-radius:10px;border:none;background:#25d366;color:#fff;cursor:pointer;font-size:14px;font-weight:800';
+    btnWA.onclick = function(){ enviarVentaWhatsApp(venta, telefono); };
+    footer.appendChild(btnWA);
+  }, 50);
+}
+window.showRecibo = showReciboConWA;
+
+// ═══════════════════════════════════════════════════════════════
+//  FEATURE 3 — CIERRE DIARIO AUTOMÁTICO
+// ═══════════════════════════════════════════════════════════════
+window._cierreDiarioData = null;
+
+function mostrarCierreDiario() {
+  var ventas = DB.get('ventas') || [];
+  var hoy = new Date().toDateString();
+  var ventasHoy = ventas.filter(function(v){ return new Date(v.fecha).toDateString() === hoy; });
+  var totalUSD = ventasHoy.reduce(function(s,v){ return s + v.totalUSD; }, 0);
+  var totalBs = ventasHoy.reduce(function(s,v){ return s + (v.totalBs || 0); }, 0);
+  var simb = STATE.simboloLocal || 'Bs';
+
+  // Desglose por método
+  var porMetodo = {};
+  ventasHoy.forEach(function(v){
+    var m = v.metodo || 'Sin método';
+    if (!porMetodo[m]) porMetodo[m] = { count: 0, total: 0 };
+    porMetodo[m].count++;
+    porMetodo[m].total += v.totalUSD;
+  });
+
+  var metodosHtml = Object.keys(porMetodo).map(function(m){
+    return '<div class="flex justify-between" style="padding:5px 0;border-bottom:1px solid var(--border);font-size:13px">'
+      + '<span>' + m + ' <span style="color:var(--text3)">(' + porMetodo[m].count + ' trans.)</span></span>'
+      + '<span style="font-family:var(--mono);font-weight:700">$' + porMetodo[m].total.toFixed(2) + '</span></div>';
+  }).join('') || '<div style="color:var(--text3);font-size:13px">Sin ventas hoy</div>';
+
+  var fecha = new Date().toLocaleDateString('es-VE', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  document.getElementById('cierreDiarioBody').innerHTML =
+    '<div style="text-align:center;margin-bottom:16px">'
+    + '<div style="font-size:12px;color:var(--text2)">📅 ' + fecha + '</div></div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">'
+    + '<div class="cierre-stat"><div class="cierre-stat-val">$' + totalUSD.toFixed(2) + '</div><div class="cierre-stat-lbl">Total USD</div></div>'
+    + '<div class="cierre-stat"><div class="cierre-stat-val">' + simb + ' ' + totalBs.toFixed(0) + '</div><div class="cierre-stat-lbl">Total ' + simb + '</div></div>'
+    + '<div class="cierre-stat"><div class="cierre-stat-val">' + ventasHoy.length + '</div><div class="cierre-stat-lbl">Transacciones</div></div>'
+    + '</div>'
+    + '<div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text2);text-transform:uppercase;margin-bottom:8px">Desglose por método</div>'
+    + metodosHtml;
+
+  window._cierreDiarioData = { ventasHoy, totalUSD, totalBs, porMetodo, fecha, simb };
+  openModal('modalCierreDiario');
+}
+
+function enviarCierreWhatsApp() {
+  var d = window._cierreDiarioData;
+  if (!d) return;
+  var cfg = DB.get('config') || {};
+  var negocio = cfg.negocio || (STATE.user && STATE.user.negocio) || 'Mi Negocio';
+  var lineas = [
+    '📊 *CIERRE DEL DÍA — ' + negocio + '*',
+    '📅 ' + d.fecha,
+    '─────────────────',
+    '💵 Total USD: *$' + d.totalUSD.toFixed(2) + '*',
+    '💴 Total ' + d.simb + ': ' + d.simb + ' ' + d.totalBs.toFixed(0),
+    '🧾 Transacciones: ' + d.ventasHoy.length,
+    '─────────────────',
+    '*Por método de pago:*'
+  ];
+  Object.keys(d.porMetodo).forEach(function(m){
+    lineas.push('  · ' + m + ': $' + d.porMetodo[m].total.toFixed(2) + ' (' + d.porMetodo[m].count + ' trans.)');
+  });
+  lineas.push('─────────────────');
+  lineas.push('✅ Generado con Bodega Pro Cloud');
+  window.open('https://wa.me/?text=' + encodeURIComponent(lineas.join('\n')), '_blank');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  FEATURE 4 — ALERTAS DE FIADOS
+// ═══════════════════════════════════════════════════════════════
+function renderAlertasFiados() {
+  var clientes = DB.get('clientes') || [];
+  var alertas = clientes.filter(function(c){ return (c.deuda || 0) > 0; });
+  var cont = document.getElementById('clienteStats');
+  if (!cont) return;
+
+  // Stats
+  var totalDeuda = clientes.reduce(function(s,c){ return s + (c.deuda || 0); }, 0);
+  var sobreLimite = clientes.filter(function(c){ return (c.deuda || 0) > (c.limite || 50); }).length;
+  cont.innerHTML =
+    '<div class="bento-item">'
+    + '<div class="bento-value" style="color:var(--danger)">$' + totalDeuda.toFixed(2) + '</div>'
+    + '<div class="bento-label">Deuda Total</div></div>'
+    + '<div class="bento-item">'
+    + '<div class="bento-value" style="color:var(--warn)">' + alertas.length + '</div>'
+    + '<div class="bento-label">Con Deuda</div></div>'
+    + '<div class="bento-item">'
+    + '<div class="bento-value" style="color:var(--danger)">' + sobreLimite + '</div>'
+    + '<div class="bento-label">Sobre Límite</div></div>';
+
+  // Alertas visuales
+  var alertHtml = '';
+  alertas.filter(function(c){ return (c.deuda||0) > (c.limite||50); }).forEach(function(c){
+    alertHtml += '<div class="fiado-alert">'
+      + '<div><strong style="color:var(--danger)">' + c.nombre + '</strong>'
+      + ' <span style="font-size:12px;color:var(--text2)">· Límite: $' + c.limite + '</span></div>'
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<span style="font-family:var(--mono);color:var(--danger);font-weight:700">$' + (c.deuda||0).toFixed(2) + '</span>'
+      + (c.telefono ? '<button onclick="enviarRecordatorioWA(' + c.id + ')" style="background:#25d366;border:none;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:700">📱 WA</button>' : '')
+      + '</div></div>';
+  });
+
+  if (alertHtml) {
+    var alertCont = document.getElementById('alertasFiadosContainer');
+    if (!alertCont) {
+      alertCont = document.createElement('div');
+      alertCont.id = 'alertasFiadosContainer';
+      var tableWrap = cont.parentElement.querySelector('.table-wrap');
+      if (tableWrap) cont.parentElement.insertBefore(alertCont, tableWrap);
+    }
+    alertCont.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--danger);text-transform:uppercase;margin-bottom:8px;margin-top:12px">⚠️ Clientes sobre límite</div>' + alertHtml;
+  }
+}
+
+function enviarRecordatorioWA(clienteId) {
+  var clientes = DB.get('clientes') || [];
+  var c = clientes.find(function(x){ return x.id === clienteId; });
+  if (!c || !c.telefono) return;
+  var cfg = DB.get('config') || {};
+  var negocio = cfg.negocio || 'Mi Negocio';
+  var tel = c.telefono.replace(/\D/g, '');
+  var msg = '🏪 *' + negocio + '*\n\nHola ' + c.nombre + ', te recordamos que tienes una deuda pendiente de *$' + (c.deuda||0).toFixed(2) + '*.\n\nPor favor comunícate con nosotros para coordinar el pago.\n\n¡Gracias!';
+  window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(msg), '_blank');
+}
+
+// Patch renderClientes para incluir alertas
+var _renderClientesOrig = renderClientes;
+function renderClientesConAlertas() {
+  _renderClientesOrig();
+  renderAlertasFiados();
+}
+window.renderClientes = renderClientesConAlertas;
+
+// ═══════════════════════════════════════════════════════════════
+//  FEATURE 5 — MULTI-USUARIO CON ROLES
+// ═══════════════════════════════════════════════════════════════
+var _userSesion = null; // usuario activo dentro de la sesión
+
+function getUsuarios() { return DB.get('usuarios') || []; }
+function saveUsuariosDB(arr) { DB.set('usuarios', arr); }
+
+function mostrarUserPicker() {
+  var usuarios = getUsuarios();
+  if (!usuarios.length) return; // Sin usuarios configurados: modo libre
+  var picker = document.getElementById('modalUserPicker');
+  if (!picker) return;
+  picker.style.display = 'flex';
+  var list = document.getElementById('userPickerList');
+  if (!list) return;
+  list.innerHTML = usuarios.map(function(u){
+    var initials = u.nombre.split(' ').map(function(w){ return w[0]; }).join('').slice(0,2).toUpperCase();
+    var rolColor = u.rol === 'admin' ? 'var(--accent)' : 'var(--neon)';
+    return '<div class="user-pick-card" onclick="seleccionarUsuario(' + u.id + ')">'
+      + '<div class="user-pick-avatar" style="background:linear-gradient(135deg,' + rolColor + ',var(--bg2))">' + initials + '</div>'
+      + '<div style="font-weight:700;font-size:14px">' + u.nombre + '</div>'
+      + '<div style="font-size:11px;color:var(--text2);margin-top:2px">' + (u.rol === 'admin' ? '👑 Admin' : '👷 Cajero') + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+window._userPickTarget = null;
+function seleccionarUsuario(id) {
+  var usuarios = getUsuarios();
+  var u = usuarios.find(function(x){ return x.id === id; });
+  if (!u) return;
+  window._userPickTarget = u;
+  var title = document.getElementById('userPassTitle');
+  if (title) title.textContent = '🔐 Hola, ' + u.nombre;
+  var inp = document.getElementById('userPassInput');
+  if (inp) inp.value = '';
+  var err = document.getElementById('userPassError');
+  if (err) err.style.display = 'none';
+  var picker = document.getElementById('modalUserPicker');
+  if (picker) picker.style.display = 'none';
+  openModal('modalUserPass');
+}
+
+function verificarUserPass() {
+  var u = window._userPickTarget;
+  if (!u) return;
+  var inp = document.getElementById('userPassInput');
+  var pass = inp ? inp.value : '';
+  if (pass === u.password) {
+    closeModal('modalUserPass');
+    _userSesion = u;
+    // Actualizar venta con usuario activo
+    STATE._usuarioActivo = u;
+    // Actualizar UI
+    var av = document.getElementById('userAvatar');
+    var nm = document.getElementById('userName2');
+    var initials = u.nombre.split(' ').map(function(w){ return w[0]; }).join('').slice(0,2).toUpperCase();
+    if (av) av.textContent = initials;
+    if (nm) nm.textContent = u.nombre;
+    // Restringir menú si es cajero
+    _aplicarRestriccionesRol(u.rol);
+    showToast('👋 Bienvenido, ' + u.nombre, 'success');
+  } else {
+    var err = document.getElementById('userPassError');
+    if (err) err.style.display = 'block';
+    if (inp) inp.value = '';
+    setTimeout(function(){ if(err) err.style.display='none'; }, 2000);
+  }
+}
+
+function _aplicarRestriccionesRol(rol) {
+  var soloAdmin = ['historial','devoluciones','caja','clientes','reportes','proveedores','configuracion','usuarios'];
+  var navItems = document.querySelectorAll('.nav-item[data-page]');
+  navItems.forEach(function(el){
+    var page = el.getAttribute('data-page');
+    if (rol === 'cajero' && soloAdmin.indexOf(page) >= 0) {
+      el.style.display = 'none';
+    } else {
+      el.style.display = '';
+    }
+  });
+  if (rol === 'cajero') showPage('pos', document.querySelector('[data-page="pos"]'));
+}
+
+function renderUsuarios() {
+  var usuarios = getUsuarios();
+  var tbody = document.getElementById('usuariosTable');
+  if (!tbody) return;
+  if (!usuarios.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text2)">Sin usuarios creados. El sistema funciona en modo libre.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = usuarios.map(function(u){
+    var sesionActiva = _userSesion && _userSesion.id === u.id;
+    return '<tr>'
+      + '<td style="font-family:var(--mono);font-size:12px">' + u.usuario + (sesionActiva ? ' <span style="color:var(--neon);font-size:10px">● activo</span>' : '') + '</td>'
+      + '<td>' + u.nombre + '</td>'
+      + '<td><span style="color:' + (u.rol==='admin'?'var(--accent)':'var(--neon)') + ';font-weight:700">' + (u.rol==='admin'?'👑 Admin':'👷 Cajero') + '</span></td>'
+      + '<td style="font-size:12px;color:var(--text2)">' + new Date(u.creado).toLocaleDateString('es-VE') + '</td>'
+      + '<td><button class="btn btn-sm btn-outline" onclick="editUsuario(' + u.id + ')">✏️</button> '
+      + '<button class="btn btn-sm" style="background:rgba(239,68,68,.15);color:var(--danger);border-color:var(--danger)" onclick="deleteUsuario(' + u.id + ')">🗑️</button></td>'
+      + '</tr>';
+  }).join('');
+}
+
+function openAddUsuario() {
+  // Solo admin puede gestionar usuarios
+  if (_userSesion && _userSesion.rol !== 'admin') return showToast('Solo el Admin puede gestionar usuarios','error');
+  stext('modalUsuarioTitle', 'Nuevo Usuario');
+  ['usu-id','usu-nombre','usu-usuario','usu-pass'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('usu-rol').value = 'cajero';
+  openModal('modalUsuario');
+}
+
+function editUsuario(id) {
+  if (_userSesion && _userSesion.rol !== 'admin') return showToast('Solo el Admin puede gestionar usuarios','error');
+  var u = getUsuarios().find(function(x){ return x.id === id; });
+  if (!u) return;
+  stext('modalUsuarioTitle', 'Editar Usuario');
+  document.getElementById('usu-id').value = u.id;
+  document.getElementById('usu-nombre').value = u.nombre;
+  document.getElementById('usu-usuario').value = u.usuario;
+  document.getElementById('usu-pass').value = '';
+  document.getElementById('usu-rol').value = u.rol;
+  openModal('modalUsuario');
+}
+
+function saveUsuario() {
+  var nombre = document.getElementById('usu-nombre').value.trim();
+  var usuario = document.getElementById('usu-usuario').value.trim();
+  var pass = document.getElementById('usu-pass').value;
+  var rol = document.getElementById('usu-rol').value;
+  var existingId = parseInt(document.getElementById('usu-id').value) || 0;
+  if (!nombre || !usuario) return showToast('Nombre y usuario son requeridos','error');
+  var usuarios = getUsuarios();
+  if (existingId) {
+    var idx = usuarios.findIndex(function(u){ return u.id === existingId; });
+    if (idx !== -1) {
+      usuarios[idx].nombre = nombre;
+      usuarios[idx].usuario = usuario;
+      usuarios[idx].rol = rol;
+      if (pass) usuarios[idx].password = pass;
+    }
+  } else {
+    if (!pass) return showToast('La contraseña es requerida','error');
+    var dupUser = usuarios.find(function(u){ return u.usuario === usuario; });
+    if (dupUser) return showToast('Ese nombre de usuario ya existe','error');
+    usuarios.push({ id: Date.now(), nombre, usuario, password: pass, rol, creado: new Date().toISOString() });
+  }
+  saveUsuariosDB(usuarios);
+  if (window.cloudSave) {
+    var cfg2 = DB.get('config') || {};
+    var negId = (cfg2.negocio || 'negocio').replace(/\s+/g,'_').toLowerCase();
+    window.cloudSave('negocios', negId + '_usuarios', { usuarios, _ts: new Date().toISOString() });
+  }
+  closeModal('modalUsuario');
+  renderUsuarios();
+  showToast('✅ Usuario guardado', 'success');
+}
+
+function deleteUsuario(id) {
+  if (_userSesion && _userSesion.rol !== 'admin') return showToast('Solo el Admin puede eliminar usuarios','error');
+  if (!confirm('¿Eliminar usuario?')) return;
+  saveUsuariosDB(getUsuarios().filter(function(u){ return u.id !== id; }));
+  renderUsuarios();
+  showToast('✅ Usuario eliminado', 'success');
+}
+
+// Exponer funciones de usuarios y cierre
+window.mostrarUserPicker = mostrarUserPicker;
+window.seleccionarUsuario = seleccionarUsuario;
+window.verificarUserPass = verificarUserPass;
+window.renderUsuarios = renderUsuarios;
+window.openAddUsuario = openAddUsuario;
+window.editUsuario = editUsuario;
+window.saveUsuario = saveUsuario;
+window.deleteUsuario = deleteUsuario;
+window.mostrarCierreDiario = mostrarCierreDiario;
+window.enviarCierreWhatsApp = enviarCierreWhatsApp;
+window.enviarVentaWhatsApp = enviarVentaWhatsApp;
+window.enviarRecordatorioWA = enviarRecordatorioWA;
+
+// Hook showPage para renderizar páginas nuevas
+var _showPageOrig = window.showPage || showPage;
+function showPageExtended(page, el) {
+  _showPageOrig(page, el);
+  if (page === 'usuarios') renderUsuarios();
+}
+window.showPage = showPageExtended;
+
+// Hook startApp para mostrar user picker si hay usuarios configurados
+var _startAppOrig = window.startApp;
+if (_startAppOrig) {
+  window.startApp = function() {
+    _startAppOrig();
+    setTimeout(function(){
+      if (getUsuarios().length > 0) mostrarUserPicker();
+    }, 300);
+  };
+}
 </script>
 </body>
 </html>
