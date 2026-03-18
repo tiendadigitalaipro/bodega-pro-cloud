@@ -169,6 +169,18 @@ select.form-input{cursor:pointer}
   </div>
 </div>
 
+<!-- Modal Códigos Creados -->
+<div id="modalCodigos" class="overlay" style="display:none">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">🎉 ¡Licencia Creada!</div>
+    <div id="codigosContent"></div>
+    <div class="modal-footer" style="margin-top:16px">
+      <button class="btn-cancel" onclick="cerrarModalCodigos()">Cerrar</button>
+      <button class="btn-save" id="btnWACodigos">💬 Enviar WhatsApp</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Crear / Editar -->
 <div id="modalCrear" class="overlay" style="display:none">
   <div class="modal">
@@ -192,14 +204,52 @@ select.form-input{cursor:pointer}
     </div>
     <div class="form-group">
       <label class="form-label">Plan</label>
-      <select id="m-plan" class="form-input">
+      <select id="m-plan" class="form-input" onchange="togglePlanFields()">
         <option value="demo" selected>🆓 Demo — 3 días GRATIS</option>
-        <option value="30">📅 30 días (1 mes)</option>
-        <option value="60">📅 60 días (2 meses)</option>
-        <option value="90">📅 90 días (3 meses)</option>
-        <option value="180">📅 180 días (6 meses)</option>
-        <option value="365">⭐ 365 días (1 año)</option>
+        <option value="pro">⭐ Licencia PRO</option>
       </select>
+    </div>
+    <!-- Campos DEMO -->
+    <div id="grupo-demo">
+      <div class="form-group">
+        <label class="form-label">Días de prueba</label>
+        <select id="m-dias-demo" class="form-input">
+          <option value="1">1 día</option>
+          <option value="2">2 días</option>
+          <option value="3" selected>3 días</option>
+          <option value="4">4 días</option>
+          <option value="5">5 días</option>
+          <option value="6">6 días</option>
+          <option value="7">7 días</option>
+        </select>
+      </div>
+    </div>
+    <!-- Campos PRO -->
+    <div id="grupo-pro" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Duración</label>
+        <select id="m-duracion" class="form-input">
+          <option value="30">1 mes (30 días)</option>
+          <option value="90">3 meses (90 días)</option>
+          <option value="180">6 meses (180 días)</option>
+          <option value="365">12 meses (1 año)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Terminales</label>
+        <select id="m-terminales" class="form-input">
+          <option value="1">1 terminal</option>
+          <option value="2">2 terminales</option>
+          <option value="3">3 terminales</option>
+          <option value="4">4 terminales</option>
+          <option value="5">5 terminales</option>
+          <option value="6">6 terminales</option>
+          <option value="7">7 terminales</option>
+          <option value="8">8 terminales</option>
+          <option value="9">9 terminales</option>
+          <option value="10">10 terminales</option>
+        </select>
+      </div>
     </div>
     <div class="form-group">
       <label class="form-label">Notas (opcional)</label>
@@ -271,6 +321,19 @@ function generarCodigo() {
   return 'BP-' + seg(4) + '-' + seg(4) + '-' + seg(4);
 }
 
+function generarCodigoPro() {
+  var c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  var seg = function(n){ var s=''; for(var i=0;i<n;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; };
+  return 'BPRO-' + seg(4) + '-' + seg(4) + '-' + seg(4);
+}
+
+function generarCodigoDashboard() {
+  var c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  var s = '';
+  for(var i=0;i<6;i++) s += c[Math.floor(Math.random()*c.length)];
+  return 'BP-CLI-' + s;
+}
+
 // ─── Load ────────────────────────────────────────────────────
 window.cargarLicencias = async function() {
   document.getElementById('listaLicencias').innerHTML = '<div class="loading-state">⏳ Cargando...</div>';
@@ -322,14 +385,14 @@ function renderLicencias() {
       : '—';
     var telefonoLimpio = (lic.telefono || '').replace(/[^0-9]/g, '');
     var msgWA = encodeURIComponent(
-      (esDemo
-        ? '🆓 *Prueba Gratuita — Bodega Pro*\n'
-        : '🔑 *Tu Licencia Bodega Pro*\n') +
-      'Código: *' + lic.codigo + '*\n' +
+      (esDemo ? '🆓 *Prueba Gratuita — Bodega Pro*\n' : '🔑 *Tu Licencia Bodega Pro PRO*\n') +
+      'Código de Activación: *' + lic.codigo + '*\n' +
+      (!esDemo && lic.codigoDashboard ? 'Código Dashboard: *' + lic.codigoDashboard + '*\n' : '') +
       'Negocio: ' + (lic.negocio || '') + '\n' +
+      (!esDemo && lic.terminales ? 'Terminales: ' + lic.terminales + '\n' : '') +
       'Vence: ' + fmtFecha(lic.fechaVencimiento) + '\n\n' +
       '📲 Acceso: https://tiendadigitalaipro.github.io/bodega-pro-cloud/\n' +
-      (esDemo ? '¡Pruébalo gratis por 3 días!' : '¡Gracias por elegir Bodega Pro!')
+      (esDemo ? '¡Pruébalo gratis!' : '¡Gracias por elegir Bodega Pro!')
     );
 
     html += '<div class="lic-card' + (esDemo ? ' is-demo' : '') + '">';
@@ -338,6 +401,7 @@ function renderLicencias() {
     html += '<div class="lic-top">';
     html += '<div>';
     html += '<div class="lic-code' + (esDemo ? ' demo' : '') + '">' + lic.codigo + '</div>';
+    if (!esDemo && lic.codigoDashboard) html += '<div style="font-family:var(--mono);font-size:11px;color:#3b82f6;margin-top:2px">📊 ' + lic.codigoDashboard + '</div>';
     html += '<div class="lic-name">' + (lic.nombreCliente || '—') + '</div>';
     html += '<div class="lic-negocio">🏪 ' + (lic.negocio || '—') + '</div>';
     if (lic.telefono) html += '<div class="lic-negocio" style="margin-top:2px">📱 ' + lic.telefono + '</div>';
@@ -350,7 +414,8 @@ function renderLicencias() {
 
     // Details grid
     html += '<div class="lic-details">';
-    html += '<div><div class="lic-det-lbl">Plan</div><div class="lic-det-val">' + (esDemo ? '3 días (DEMO)' : (lic.plan || '—') + ' días') + '</div></div>';
+    html += '<div><div class="lic-det-lbl">Plan</div><div class="lic-det-val">' + (esDemo ? (lic.plan || 3) + ' días (DEMO)' : (lic.plan || '—') + ' días') + '</div></div>';
+    if (!esDemo && lic.terminales) html += '<div><div class="lic-det-lbl">Terminales</div><div class="lic-det-val">' + lic.terminales + '</div></div>';
     html += '<div><div class="lic-det-lbl">Inicio</div><div class="lic-det-val">' + fmtFecha(lic.fechaInicio) + '</div></div>';
     html += '<div><div class="lic-det-lbl">Vence</div><div class="lic-det-val">' + fmtFecha(lic.fechaVencimiento) + '</div></div>';
     html += '<div><div class="lic-det-lbl">Vigencia</div><div class="lic-det-val" style="color:' + diasColor + '">' + diasTxt + '</div></div>';
@@ -389,15 +454,26 @@ function renderLicencias() {
 }
 
 // ─── Modal ───────────────────────────────────────────────────
+window.togglePlanFields = function() {
+  var esPro = document.getElementById('m-plan').value === 'pro';
+  document.getElementById('grupo-demo').style.display = esPro ? 'none'  : 'block';
+  document.getElementById('grupo-pro').style.display  = esPro ? 'block' : 'none';
+};
+
 window.abrirCrear = function() {
   document.getElementById('modalCrearTitle').textContent = '✨ Nueva Licencia';
-  document.getElementById('m-nombre').value   = '';
-  document.getElementById('m-negocio').value  = '';
-  document.getElementById('m-telefono').value = '';
-  document.getElementById('m-email').value    = '';
-  document.getElementById('m-plan').value     = 'demo';
-  document.getElementById('m-notas').value    = '';
-  document.getElementById('m-id-edit').value  = '';
+  document.getElementById('m-nombre').value        = '';
+  document.getElementById('m-negocio').value       = '';
+  document.getElementById('m-telefono').value      = '';
+  document.getElementById('m-email').value         = '';
+  document.getElementById('m-plan').value          = 'demo';
+  document.getElementById('m-dias-demo').value     = '3';
+  document.getElementById('m-duracion').value      = '30';
+  document.getElementById('m-terminales').value    = '1';
+  document.getElementById('grupo-demo').style.display = 'block';
+  document.getElementById('grupo-pro').style.display  = 'none';
+  document.getElementById('m-notas').value         = '';
+  document.getElementById('m-id-edit').value       = '';
   document.getElementById('btnGuardar').textContent = '💾 Crear Licencia';
   document.getElementById('modalCrear').style.display = 'flex';
   setTimeout(function(){ document.getElementById('m-nombre').focus(); }, 100);
@@ -406,12 +482,23 @@ window.abrirCrear = function() {
 window.abrirEditar = function(id) {
   var lic = _lics.find(function(l){ return l._id === id; });
   if (!lic) return;
+  var esDemo = lic.tipo === 'DEMO';
   document.getElementById('modalCrearTitle').textContent = '✏️ Editar Licencia';
   document.getElementById('m-nombre').value   = lic.nombreCliente || '';
   document.getElementById('m-negocio').value  = lic.negocio || '';
   document.getElementById('m-telefono').value = lic.telefono || '';
   document.getElementById('m-email').value    = lic.email || '';
-  document.getElementById('m-plan').value     = lic.tipo === 'DEMO' ? 'demo' : String(lic.plan || 30);
+  document.getElementById('m-plan').value     = esDemo ? 'demo' : 'pro';
+  if (esDemo) {
+    document.getElementById('m-dias-demo').value     = String(lic.plan || 3);
+    document.getElementById('grupo-demo').style.display = 'block';
+    document.getElementById('grupo-pro').style.display  = 'none';
+  } else {
+    document.getElementById('m-duracion').value      = String(lic.plan || 30);
+    document.getElementById('m-terminales').value    = String(lic.terminales || 1);
+    document.getElementById('grupo-demo').style.display = 'none';
+    document.getElementById('grupo-pro').style.display  = 'block';
+  }
   document.getElementById('m-notas').value    = lic.notas || '';
   document.getElementById('m-id-edit').value  = id;
   document.getElementById('btnGuardar').textContent = '💾 Actualizar';
@@ -419,21 +506,24 @@ window.abrirEditar = function(id) {
 };
 
 window.cerrarModal = function() {
-  document.getElementById('modalCrear').style.display = 'none';
+  document.getElementById('modalCrear').style.display  = 'none';
 };
 
 // ─── Save ────────────────────────────────────────────────────
 window.guardarLicencia = async function() {
-  var nombre   = document.getElementById('m-nombre').value.trim();
-  var negocio  = document.getElementById('m-negocio').value.trim();
-  var telefono = document.getElementById('m-telefono').value.trim();
-  var email    = document.getElementById('m-email').value.trim();
-  var planVal  = document.getElementById('m-plan').value;
-  var esDemo   = planVal === 'demo';
-  var plan     = esDemo ? 3 : parseInt(planVal);
-  var tipo     = esDemo ? 'DEMO' : 'PRO';
-  var notas    = document.getElementById('m-notas').value.trim();
-  var idEdit   = document.getElementById('m-id-edit').value;
+  var nombre     = document.getElementById('m-nombre').value.trim();
+  var negocio    = document.getElementById('m-negocio').value.trim();
+  var telefono   = document.getElementById('m-telefono').value.trim();
+  var email      = document.getElementById('m-email').value.trim();
+  var planVal    = document.getElementById('m-plan').value;
+  var esDemo     = planVal === 'demo';
+  var plan       = esDemo
+    ? parseInt(document.getElementById('m-dias-demo').value)
+    : parseInt(document.getElementById('m-duracion').value);
+  var terminales = esDemo ? 1 : parseInt(document.getElementById('m-terminales').value);
+  var tipo       = esDemo ? 'DEMO' : 'PRO';
+  var notas      = document.getElementById('m-notas').value.trim();
+  var idEdit     = document.getElementById('m-id-edit').value;
 
   if (!nombre || !negocio) {
     alert('⚠️ Completa nombre del cliente y nombre del negocio.');
@@ -454,31 +544,94 @@ window.guardarLicencia = async function() {
       var nuevaFechaVenc = new Date(inicioRef);
       nuevaFechaVenc.setDate(nuevaFechaVenc.getDate() + plan);
       await updateDoc(doc(db, 'licencias', idEdit), {
-        nombreCliente: nombre, negocio, telefono, email, plan, tipo, notas,
+        nombreCliente: nombre, negocio, telefono, email, plan, tipo, terminales, notas,
         fechaVencimiento: nuevaFechaVenc.toISOString()
       });
+      cerrarModal();
+      await cargarLicencias();
     } else {
       // Nueva licencia
-      var codigo = generarCodigo();
+      var codigo           = esDemo ? generarCodigo() : generarCodigoPro();
+      var codigoDashboard  = esDemo ? null : generarCodigoDashboard();
       var vencimiento = new Date();
       vencimiento.setDate(vencimiento.getDate() + plan);
-      await setDoc(doc(db, 'licencias', codigo), {
-        codigo, nombreCliente: nombre, negocio, telefono, email, plan, tipo, notas,
+      var docData = {
+        codigo, nombreCliente: nombre, negocio, telefono, email,
+        plan, tipo, terminales, notas,
         activa: true,
         fechaInicio: ahora,
         fechaVencimiento: vencimiento.toISOString(),
         creadaEn: ahora
-      });
-    }
+      };
+      if (codigoDashboard) docData.codigoDashboard = codigoDashboard;
+      await setDoc(doc(db, 'licencias', codigo), docData);
 
-    cerrarModal();
-    await cargarLicencias();
+      cerrarModal();
+      await cargarLicencias();
+
+      // Mostrar códigos generados
+      mostrarCodigos({
+        codigo, codigoDashboard, nombreCliente: nombre, negocio,
+        tipo, plan, terminales,
+        fechaVencimiento: vencimiento.toISOString()
+      }, telefono);
+    }
   } catch(e) {
     alert('❌ Error guardando: ' + e.message);
   } finally {
     btn.textContent = idEdit ? '💾 Actualizar' : '💾 Crear Licencia';
     btn.disabled = false;
   }
+};
+
+// ─── Mostrar códigos tras crear ───────────────────────────────
+function mostrarCodigos(lic, telefono) {
+  var esDemo = lic.tipo === 'DEMO';
+  var telefonoLimpio = (telefono || '').replace(/[^0-9]/g, '');
+
+  var html = '<div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:10px;padding:14px;margin-bottom:12px">';
+  html += '<div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Código de Activación</div>';
+  html += '<div style="font-family:var(--mono);font-size:15px;font-weight:700;color:' + (esDemo ? '#fb923c' : 'var(--neon)') + ';letter-spacing:1px;word-break:break-all">' + lic.codigo + '</div>';
+  html += '</div>';
+
+  if (lic.codigoDashboard) {
+    html += '<div style="background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:14px;margin-bottom:12px">';
+    html += '<div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Código Dashboard (cliente)</div>';
+    html += '<div style="font-family:var(--mono);font-size:15px;font-weight:700;color:#3b82f6;letter-spacing:1px">' + lic.codigoDashboard + '</div>';
+    html += '</div>';
+  }
+
+  html += '<div style="font-size:12px;color:var(--text2);margin-top:4px">Cliente: <strong style="color:var(--text)">' + lic.nombreCliente + '</strong> · ' + lic.negocio + '</div>';
+  html += '<div style="font-size:12px;color:var(--text2);margin-top:4px">Vence: <strong style="color:var(--text)">' + fmtFecha(lic.fechaVencimiento) + '</strong>';
+  if (!esDemo && lic.terminales > 1) html += ' · <strong style="color:var(--text)">' + lic.terminales + ' terminales</strong>';
+  html += '</div>';
+
+  document.getElementById('codigosContent').innerHTML = html;
+
+  var msgWA = (esDemo ? '🆓 *Prueba Gratuita — Bodega Pro*\n' : '🔑 *Tu Licencia Bodega Pro PRO*\n') +
+    'Código de Activación: *' + lic.codigo + '*\n' +
+    (lic.codigoDashboard ? 'Código Dashboard: *' + lic.codigoDashboard + '*\n' : '') +
+    'Negocio: ' + lic.negocio + '\n' +
+    (!esDemo && lic.terminales > 1 ? 'Terminales: ' + lic.terminales + '\n' : '') +
+    'Vence: ' + fmtFecha(lic.fechaVencimiento) + '\n\n' +
+    '📲 Acceso: https://tiendadigitalaipro.github.io/bodega-pro-cloud/\n' +
+    (esDemo ? '¡Pruébalo gratis!' : '¡Gracias por elegir Bodega Pro!');
+
+  var btnWA = document.getElementById('btnWACodigos');
+  if (telefonoLimpio) {
+    btnWA.style.display = '';
+    btnWA.onclick = function() {
+      window.open('https://wa.me/' + telefonoLimpio + '?text=' + encodeURIComponent(msgWA), '_blank');
+    };
+  } else {
+    btnWA.style.display = 'none';
+  }
+
+  document.getElementById('modalCodigos').style.display = 'flex';
+}
+
+window.cerrarModalCodigos = function() {
+  document.getElementById('modalCodigos').style.display = 'none';
 };
 
 // ─── Toggle ──────────────────────────────────────────────────
