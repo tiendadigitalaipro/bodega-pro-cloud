@@ -1888,125 +1888,53 @@ canvas{max-width:100%!important}
               </div>
             </div>
 
+            <!-- ══ MI SUSCRIPCIÓN ══ -->
             <div class="card mb-4">
-              <div class="card-title mb-3">🔐 Seguridad de Licencia</div>
-
-              <div class="alert alert-info" style="margin-bottom:12px">
-                <strong>🔒 Licencia Activa</strong><br>
-                <span style="font-size:11px" id="licenseDeviceId">Device ID: DEV-3SWN-J939</span><br>
-                <span style="font-size:11px">Licencia ligada a este dispositivo. Máx. 2 terminales por código.</span>
+              <div class="card-title mb-3">📊 Mi Suscripción</div>
+              <div id="miSuscripcionContent">
+                <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Cargando...</div>
               </div>
-              <div id="adminBtnWrap" style="display:block">
-                <button id="btnToggleAdmin" onclick="toggleAdminPanel(event)" style="width:100%;padding:13px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:700;font-size:14px;cursor:pointer;margin-bottom:10px">🔑 Panel Admin ZYNC — Generar Codigos</button>
-              </div>
-              <div id="adminLicPanel" style="display:none;margin-top:12px">
-                <div style="background:var(--bg2);border:1px solid var(--accent);border-radius:16px;padding:20px">
-                  <div class="card-title mb-4" style="color:var(--accent);font-size:16px">🛠️ Panel Admin A2K — Sistema de Licencias</div>
+            </div>
 
-                  <!-- TABS -->
-                  <div style="display:flex;gap:8px;margin-bottom:16px">
-                    <button onclick="switchLicTab(&#39;pro&#39;)" id="tabPro" class="btn btn-primary" style="flex:1;font-weight:700">
-                      ⚡ Licencia PRO
-                    </button>
-                    <button onclick="switchLicTab(&#39;demo&#39;)" id="tabDemo" class="btn btn-ghost" style="flex:1;font-weight:700">
-                      🎯 Licencia DEMO
-                    </button>
-                  </div>
-
-                  <!-- TAB PRO -->
-                  <div id="panelLicPro">
-                    <div class="form-group">
-                      <label class="form-label">Nombre del Negocio Cliente *</label>
-                      <input type="text" id="lic-negocio" class="form-input" placeholder="Bodega La Esquina, Farmacia Central...">
-                    </div>
-                    <div class="grid-2">
-                      <div class="form-group">
-                        <label class="form-label">⏳ Duración PRO</label>
-                        <select id="lic-meses" class="form-select" onchange="actualizarVencePRO()">
-                          <option value="1">1 mes</option>
-                          <option value="3">3 meses</option>
-                          <option value="6">6 meses</option>
-                          <option value="12" selected="">12 meses (1 año)</option>
-                          <option value="24">24 meses (2 años)</option>
-                          <option value="0">Permanente (sin venc.)</option>
-                        </select>
-                      </div>
-                      <div class="form-group">
-                        <label class="form-label">📅 Vence el</label>
-                        <input type="text" id="lic-fecha-vence" class="form-input" readonly="" style="color:var(--neon);font-weight:700;font-family:var(--mono);background:var(--bg3)" placeholder="Auto">
-                      </div>
-                    </div>
-                    <div class="grid-2">
-                      <div class="form-group">
-                        <label class="form-label">Máx. Terminales</label>
-                        <select id="lic-terminales" class="form-select">
-                          <option value="1">1 terminal</option>
-                          <option value="2" selected="">2 terminales</option>
-                          <option value="3">3 terminales</option>
-                        </select>
-                      </div>
-                      <div class="form-group" style="display:flex;align-items:flex-end">
-                        <button class="btn btn-primary btn-full" onclick="generarLicencia()" style="height:42px;background:linear-gradient(135deg,#7c3aed,#06d6a0)">
-                          ⚡ Generar Código PRO
-                        </button>
-                      </div>
-                    </div>
-                    <div id="lic-resultado" style="display:none;margin-top:12px;background:var(--bg3);border:2px solid var(--neon);border-radius:12px;padding:16px">
-                      <div style="font-size:11px;color:var(--text2);margin-bottom:4px">✅ Código PRO generado:</div>
-                      <div id="lic-code-display" style="font-family:monospace;font-size:20px;font-weight:900;color:var(--neon);letter-spacing:3px"></div>
-                      <div style="font-size:11px;color:var(--text2);margin-top:4px" id="lic-info-display"></div>
-                      <div style="display:flex;gap:8px;margin-top:12px">
-                        <button class="btn btn-primary" onclick="compartirUltimaLicencia()" style="flex:1">📤 WhatsApp</button>
-                        <button class="btn btn-ghost btn-sm" onclick="copiarCodigo()" style="flex:1">📋 Copiar</button>
-                      </div>
+            <!-- ══ DISPOSITIVOS CONECTADOS ══ -->
+            <div class="card mb-4">
+              <div class="card-title mb-3">🖨️ Dispositivos Conectados</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <!-- Impresora -->
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:22px">🖨️</span>
+                    <div>
+                      <div style="font-size:13px;font-weight:700;color:var(--text)">Impresora Térmica</div>
+                      <div id="statusImpresora" style="font-size:11px;color:var(--text3)">● Desconectada</div>
                     </div>
                   </div>
-
-                  <!-- TAB DEMO -->
-                  <div id="panelLicDemo" style="display:none">
-                    <div class="form-group">
-                      <label class="form-label">Nombre del Negocio Cliente *</label>
-                      <input type="text" id="demo-negocio" class="form-input" placeholder="Bodega La Esquina...">
-                    </div>
-                    <div class="grid-2">
-                      <div class="form-group">
-                        <label class="form-label">⏱️ Duración Demo</label>
-                        <select id="demo-dias" class="form-select" onchange="actualizarVenceEl()">
-                          <option value="1">1 día</option>
-                          <option value="2">2 días</option>
-                          <option value="3" selected="">3 días</option>
-                          <option value="5">5 días</option>
-                          <option value="7">7 días</option>
-                        </select>
-                      </div>
-                      <div class="form-group">
-                        <label class="form-label">📅 Vence el</label>
-                        <input type="text" id="demo-fecha-vence" class="form-input" readonly="" style="background:var(--bg3);color:var(--warn);font-weight:700;text-align:center" placeholder="Auto">
-                      </div>
-                    </div>
-                    <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--text2)">
-                      ℹ️ El cliente prueba la app por <strong id="demo-dias-label" style="color:var(--warn)">3 días</strong>. Al vencer, se bloquea pero <strong style="color:var(--neon)">sus datos se conservan</strong>. Solo necesita el código PRO para continuar.
-                    </div>
-                    <button class="btn btn-full" onclick="generarLicenciaDemo()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);font-weight:700;height:42px">
-                      🎯 Generar Código DEMO
-                    </button>
-                    <div id="demo-resultado" style="display:none;margin-top:12px;background:var(--bg3);border:2px solid var(--warn);border-radius:12px;padding:16px">
-                      <div style="font-size:11px;color:var(--text2);margin-bottom:4px">🎯 Código DEMO generado:</div>
-                      <div id="demo-code-display" style="font-family:monospace;font-size:20px;font-weight:900;color:var(--warn);letter-spacing:3px"></div>
-                      <div style="font-size:11px;color:var(--text2);margin-top:4px" id="demo-info-display"></div>
-                      <div style="display:flex;gap:8px;margin-top:12px">
-                        <button class="btn btn-full" onclick="compartirUltimaDemo()" style="background:#25D366;color:#fff;font-weight:700">📤 Enviar por WhatsApp</button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- LISTA DE LICENCIAS -->
-                  <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
-                    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">📋 HISTORIAL DE LICENCIAS</div>
-                    <div id="licTable"></div>
-                  </div>
+                  <button class="btn btn-outline btn-sm" onclick="conectarImpresora()">Configurar</button>
                 </div>
-              </div></div>
+                <!-- Balanza -->
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:22px">⚖️</span>
+                    <div>
+                      <div style="font-size:13px;font-weight:700;color:var(--text)">Balanza Digital</div>
+                      <div id="statusBalanza" style="font-size:11px;color:var(--text3)">● Desconectada</div>
+                    </div>
+                  </div>
+                  <button class="btn btn-outline btn-sm" onclick="conectarBalanza()">Configurar</button>
+                </div>
+                <!-- Pantalla cliente -->
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--bg2);border-radius:10px;border:1px solid var(--border)">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:22px">📺</span>
+                    <div>
+                      <div style="font-size:13px;font-weight:700;color:var(--text)">Pantalla Cliente</div>
+                      <div id="statusPantalla" style="font-size:11px;color:var(--text3)">● Desconectada</div>
+                    </div>
+                  </div>
+                  <button class="btn btn-outline btn-sm" onclick="configurarPantallaCliente()">Configurar</button>
+                </div>
+              </div>
+            </div>
 
             <div class="card">
               <div class="card-title mb-3">💳 Métodos de Pago Activos</div>
@@ -7699,6 +7627,129 @@ if (_startAppOrig) {
     }, 300);
   };
 }
+
+// ── MI SUSCRIPCIÓN ──
+function renderMiSuscripcion() {
+  var el = document.getElementById('miSuscripcionContent');
+  if (!el) return;
+  var lic = (typeof DB !== 'undefined') ? DB.get('license') : null;
+  if (!lic || !lic.code) {
+    el.innerHTML = '<div style="text-align:center;padding:20px 10px">'
+      + '<div style="font-size:32px;margin-bottom:8px">🔒</div>'
+      + '<div style="font-size:13px;color:var(--text2);margin-bottom:12px">Sin licencia activa</div>'
+      + '<button class="btn btn-primary btn-sm" onclick="showPage(\'configuracion\')">'
+      + 'Activar Licencia</button></div>';
+    return;
+  }
+  var esDemo = lic.esDemo || (lic.code && lic.code.indexOf('DEMO') === 0);
+  var plan = esDemo ? 'DEMO' : 'PRO';
+  var planColor = esDemo ? '#f59e0b' : '#7c3aed';
+  var estadoTxt = 'Activa';
+  var estadoColor = 'var(--neon)';
+  var venceStr = 'Sin vencimiento';
+  var diasRestantes = null;
+  var pct = 100;
+  var barColor = '#16a34a';
+  if (lic.venceEn) {
+    var ahora = new Date();
+    var vence = new Date(lic.venceEn);
+    var creadoEn = lic.creadoEn ? new Date(lic.creadoEn) : null;
+    diasRestantes = Math.max(0, Math.ceil((vence - ahora) / 86400000));
+    if (creadoEn) {
+      var diasTotales = Math.ceil((vence - creadoEn) / 86400000);
+      pct = diasTotales > 0 ? Math.round((diasRestantes / diasTotales) * 100) : 0;
+    } else {
+      pct = diasRestantes > 0 ? Math.min(100, Math.round((diasRestantes / 30) * 100)) : 0;
+    }
+    venceStr = vence.toLocaleDateString('es-VE', {day:'numeric', month:'long', year:'numeric'});
+    if (diasRestantes <= 0) { estadoTxt = 'Vencida'; estadoColor = 'var(--danger)'; barColor = '#dc2626'; }
+    else if (diasRestantes <= 3) { estadoTxt = 'Por vencer'; estadoColor = 'var(--warn)'; barColor = '#f59e0b'; }
+    else if (pct < 30) { barColor = '#f59e0b'; }
+  }
+  var terminales = lic.maxTerminales || 2;
+  var negocio = lic.negocio || (DB.get('config') || {}).negocio || 'Mi Negocio';
+  var code = lic.code || '—';
+  var waMsg = encodeURIComponent('Hola A2K Studio, quiero renovar mi licencia Bodega Pro.\nNegocio: ' + negocio + '\nCódigo: ' + code);
+  el.innerHTML = ''
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'
+    +   '<div style="display:flex;align-items:center;gap:8px">'
+    +     '<span style="background:' + planColor + ';color:#fff;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:800;letter-spacing:1px">' + plan + '</span>'
+    +     '<span style="background:var(--bg3);padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;color:' + estadoColor + '">' + estadoTxt + '</span>'
+    +   '</div>'
+    +   '<span style="font-size:11px;font-family:var(--mono);color:var(--text2)">' + terminales + ' terminal(es)</span>'
+    + '</div>'
+    + '<div style="background:var(--bg2);border-radius:10px;padding:10px 12px;margin-bottom:10px">'
+    +   '<div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">Código de Licencia</div>'
+    +   '<div style="font-family:var(--mono);font-size:14px;font-weight:900;color:var(--accent);letter-spacing:2px;word-break:break-all">' + code + '</div>'
+    + '</div>'
+    + (lic.venceEn ? (''
+    +   '<div style="margin-bottom:12px">'
+    +     '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px">'
+    +       '<span style="color:var(--text2)">Vence: <strong style="color:' + estadoColor + '">' + venceStr + '</strong></span>'
+    +       '<span style="color:' + estadoColor + ';font-weight:800;font-family:var(--mono)">' + diasRestantes + ' días</span>'
+    +     '</div>'
+    +     '<div style="background:var(--bg3);border-radius:4px;height:8px;overflow:hidden">'
+    +       '<div style="background:' + barColor + ';height:100%;width:' + pct + '%;border-radius:4px;transition:width .3s"></div>'
+    +     '</div>'
+    +   '</div>'
+    ) : '<div style="font-size:11px;color:var(--text3);margin-bottom:12px">Sin fecha de vencimiento</div>')
+    + '<div style="display:flex;flex-direction:column;gap:8px">'
+    +   '<button class="btn btn-primary btn-full" onclick="window.open(\'https://wa.me/584164117331?text=' + waMsg + '\',\'_blank\')" style="font-size:13px;font-weight:700">'
+    +     '🔄 Renovar — Contactar A2K Studio'
+    +   '</button>'
+    +   '<button class="btn btn-outline btn-full" onclick="abrirDashboardCliente()" style="font-size:13px">'
+    +     '📊 Ver mi Dashboard'
+    +   '</button>'
+    + '</div>';
+}
+
+function abrirDashboardCliente() {
+  var lic = (typeof DB !== 'undefined') ? DB.get('license') : null;
+  var cliCode = (lic && lic.codigoDashboard) ? lic.codigoDashboard : (lic && lic.code ? lic.code : '');
+  var url = 'https://tiendadigitalaipro.github.io/bodega-pro-cloud/dashboard.html?cli=' + encodeURIComponent(cliCode);
+  window.open(url, '_blank');
+}
+
+function _actualizarStatusDispositivos() {
+  var imp = document.getElementById('statusImpresora');
+  if (imp) {
+    var tieneImp = (typeof STATE !== 'undefined') && STATE && STATE.impresora;
+    imp.innerHTML = tieneImp
+      ? '<span style="color:var(--neon)">● Conectada</span>'
+      : '<span style="color:var(--text3)">● Desconectada</span>';
+  }
+  var bal = document.getElementById('statusBalanza');
+  if (bal) {
+    var tieneBalanza = (typeof STATE !== 'undefined') && STATE && STATE.balanza;
+    bal.innerHTML = tieneBalanza
+      ? '<span style="color:var(--neon)">● Conectada</span>'
+      : '<span style="color:var(--text3)">● Desconectada</span>';
+  }
+  var pan = document.getElementById('statusPantalla');
+  if (pan) {
+    pan.innerHTML = '<span style="color:var(--text3)">● Desconectada</span>';
+  }
+}
+
+function configurarPantallaCliente() {
+  showToast('Pantalla cliente — próximamente en Bodega Pro v9', 'info');
+}
+
+window.renderMiSuscripcion = renderMiSuscripcion;
+window.abrirDashboardCliente = abrirDashboardCliente;
+window.configurarPantallaCliente = configurarPantallaCliente;
+
+// Hook showPage para cargar módulos de config
+var _showPageForConfig = window.showPage;
+window.showPage = function(page, el) {
+  _showPageForConfig(page, el);
+  if (page === 'configuracion') {
+    setTimeout(function(){
+      try { renderMiSuscripcion(); } catch(e){}
+      try { _actualizarStatusDispositivos(); } catch(e){}
+    }, 120);
+  }
+};
 
 // ── MERCADO HEADER — RELOJ EN TIEMPO REAL + MIRROR TOTAL ──
 (function() {
