@@ -135,44 +135,58 @@ window.accederCliente = async function() {
   var negocioRaw = document.getElementById('negocioInput').value.trim();
   var pin = document.getElementById('pinInput').value.trim();
   var err = document.getElementById('loginErr');
+  var btn = document.querySelector('.btn-primary');
   err.style.display = 'none';
 
-  if (!negocioRaw || !pin) {
-    err.textContent = '❌ Completa el nombre del negocio y tu PIN';
+  // Validaciones previas
+  if (!negocioRaw) {
+    err.textContent = '❌ Ingresa el nombre del negocio';
+    err.style.display = 'block'; return;
+  }
+  if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+    err.textContent = '❌ El PIN debe ser exactamente 4 dígitos';
     err.style.display = 'block'; return;
   }
 
+  if (btn) { btn.textContent = '⏳ Verificando...'; btn.disabled = true; }
+
   try {
     var data = null;
+    var docIdEncontrado = null;
 
     // 1. Intentar con cada variante del nombre como doc ID
     var candidatos = generarCandidatos(negocioRaw);
     for (var i = 0; i < candidatos.length; i++) {
       var snap = await getDoc(doc(db, 'negocios', candidatos[i]));
-      if (snap.exists()) { data = snap.data(); break; }
+      if (snap.exists()) { data = snap.data(); docIdEncontrado = candidatos[i]; break; }
     }
 
-    // 2. Fallback: buscar en toda la colección por localId o nombre parcial
+    // 2. Fallback: buscar en colección solo por coincidencia EXACTA del localId normalizado
     if (!data) {
       var colSnap = await getDocs(collection(db, 'negocios'));
-      var termino = negocioRaw.toLowerCase().replace(/\s+/g,'');
+      var terminoExacto = generarCandidatos(negocioRaw)[0]; // variante principal
       colSnap.forEach(function(d) {
         if (data) return;
         var docData = d.data();
         var lid = (docData.localId || d.id || '').toLowerCase().replace(/[^a-z0-9]/g,'');
-        if (lid.includes(termino) || termino.includes(lid)) data = docData;
+        var ter = terminoExacto.replace(/[^a-z0-9]/g,'');
+        // Solo coincidencia exacta tras normalizar
+        if (lid === ter) { data = docData; docIdEncontrado = d.id; }
       });
     }
 
     if (!data) {
-      err.textContent = '❌ Negocio no encontrado. Verifica el nombre exacto.';
+      err.textContent = '❌ Negocio no encontrado. Verifica el nombre en tu factura.';
       err.style.display = 'block'; return;
     }
 
+    // Validar PIN — obligatorio, debe coincidir exactamente
     var clientes = data.clientes || [];
-    var cliente = clientes.find(function(c){ return c.pin && c.pin === pin; });
+    var cliente = clientes.find(function(c){
+      return c.pin && String(c.pin).trim() === pin;
+    });
     if (!cliente) {
-      err.textContent = '❌ PIN incorrecto o cliente no encontrado';
+      err.textContent = '❌ PIN incorrecto';
       err.style.display = 'block'; return;
     }
     _clienteData = cliente;
@@ -184,6 +198,8 @@ window.accederCliente = async function() {
   } catch(e) {
     err.textContent = '❌ Error de conexión: ' + e.message;
     err.style.display = 'block';
+  } finally {
+    if (btn) { btn.textContent = '🔓 Acceder'; btn.disabled = false; }
   }
 };
 
