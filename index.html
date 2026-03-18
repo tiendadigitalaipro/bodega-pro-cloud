@@ -2220,7 +2220,7 @@ function checkMobile() {
 }
 
 // ─── AUTH ──────────────────────────────────────────────────────
-function doLogin() {
+async function doLogin() {
   const negocio = document.getElementById('ln-negocio').value.trim();
   const user    = document.getElementById('ln-user').value.trim();
   const pass    = document.getElementById('ln-pass').value;
@@ -2228,6 +2228,43 @@ function doLogin() {
 
   if (!negocio || !user || !pass) return showLoginAlert('Completa todos los campos', 'error');
   if (!code) return showLoginAlert('Ingresa tu código de activación', 'error');
+
+  // ── Verificar licencia en Firebase (sistema central A2K Studio) ────────
+  var _loginBtn = document.querySelector('#loginScreen button[onclick]');
+  if (_loginBtn) { _loginBtn.textContent = '⏳ Verificando...'; _loginBtn.disabled = true; }
+  try {
+    if (typeof window.cloudGet === 'function') {
+      var fbLic = await window.cloudGet('licencias', code);
+      if (fbLic) {
+        if (!fbLic.activa) {
+          showLoginAlert('🚫 Licencia inactiva. Contacta a A2K Digital Studio para reactivarla.', 'error');
+          return;
+        }
+        if (new Date(fbLic.fechaVencimiento) < new Date()) {
+          var _fv = new Date(fbLic.fechaVencimiento).toLocaleDateString('es-VE');
+          showLoginAlert('⏰ Licencia vencida el ' + _fv + '. Renueva con A2K Digital Studio.', 'error');
+          return;
+        }
+        // ✅ Licencia Firebase válida — acceso concedido
+        DB.set('license', {
+          code: code, deviceId: DEVICE_ID,
+          activatedAt: new Date().toISOString(),
+          esDemo: false, venceEn: fbLic.fechaVencimiento,
+          tipo: 'PRO', negocio: fbLic.negocio || negocio, fuente: 'firebase'
+        });
+        const _session = { negocio, user, deviceId: DEVICE_ID, loginAt: new Date().toISOString() };
+        DB.set('session', _session);
+        STATE.user = _session;
+        startApp();
+        return;
+      }
+      // fbLic === null → código no está en Firebase, continuar con validación local
+    }
+  } catch(_fbErr) {
+    console.warn('Firebase license check failed, usando validación local:', _fbErr);
+  } finally {
+    if (_loginBtn) { _loginBtn.textContent = '🚀 Activar y Entrar'; _loginBtn.disabled = false; }
+  }
 
   // Códigos master siempre válidos
   const MASTER = ['BPRO-DEMO-2024', 'BPRO-ABIG-2024', 'BPRO-ZYNC-2024'];
