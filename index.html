@@ -501,6 +501,183 @@ El resaltado de sintaxis se ha deshabilitado debido al tamaño del código.
 .lbl-light { display:none   }
 [data-theme="light"] .lbl-dark  { display:none   }
 [data-theme="light"] .lbl-light { display:inline }
+
+/* ── POS FULL HEIGHT (Mercado) ── */
+[data-theme="light"] #page-pos {
+  margin:-20px;
+  height:calc(100vh - 60px);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+[data-theme="light"] .pos-layout {
+  flex:1 !important;
+  height:auto !important;
+  min-height:0 !important;
+  overflow:hidden;
+}
+[data-theme="light"] .pos-products {
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+/* ── MERCADO HEADER — tira roja superior ── */
+#mercadoHeader {
+  display:none;
+  background:#dc2626;
+  border-bottom:3px solid #991b1b;
+  color:#fff;
+  padding:0 20px;
+  height:70px;
+  align-items:center;
+  justify-content:space-between;
+  flex-shrink:0;
+}
+[data-theme="light"] #mercadoHeader { display:flex; }
+#mhNegocio {
+  font-size:20px;
+  font-weight:900;
+  letter-spacing:.5px;
+  font-family:'JetBrains Mono',monospace;
+  text-transform:uppercase;
+  max-width:260px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#mhClock { text-align:center; }
+#mhTime {
+  font-size:28px;
+  font-family:'JetBrains Mono',monospace;
+  font-weight:900;
+  letter-spacing:2px;
+  line-height:1;
+}
+#mhDate {
+  font-size:11px;
+  opacity:.8;
+  text-align:center;
+  font-family:'JetBrains Mono',monospace;
+  margin-top:2px;
+}
+#mhTotalWrap { text-align:right; }
+#mhTotalLbl {
+  font-size:10px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  opacity:.75;
+  font-family:'JetBrains Mono',monospace;
+}
+#mhTotal {
+  font-size:38px;
+  font-weight:900;
+  font-family:'JetBrains Mono',monospace;
+  line-height:1;
+}
+/* ── PRODUCT TABLE HEADER ── */
+#posTableHeader {
+  display:none;
+  background:#111827;
+  padding:7px 14px;
+  flex-shrink:0;
+}
+[data-theme="light"] #posTableHeader {
+  display:grid;
+  grid-template-columns:36px 1fr 90px 70px;
+  gap:10px;
+  align-items:center;
+}
+#posTableHeader span {
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;
+  font-weight:700;
+  color:rgba(255,255,255,.8);
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+/* ── PRODUCTS AS TABLE ROWS (Mercado) ── */
+[data-theme="light"] .products-grid {
+  display:flex !important;
+  flex-direction:column !important;
+  gap:0 !important;
+  overflow-y:auto;
+  flex:1;
+  padding:0 !important;
+}
+[data-theme="light"] .product-card {
+  display:grid !important;
+  grid-template-columns:36px 1fr 90px 70px !important;
+  align-items:center !important;
+  padding:8px 14px !important;
+  border:none !important;
+  border-bottom:1px solid #e5e7eb !important;
+  min-height:44px;
+  gap:10px !important;
+  box-shadow:none !important;
+}
+[data-theme="light"] .product-card:hover {
+  background:#fff5f5 !important;
+  border-left:3px solid #dc2626 !important;
+  transform:none !important;
+}
+[data-theme="light"] .product-card .p-name {
+  font-weight:700 !important;
+  font-size:13px !important;
+  color:#111827 !important;
+  text-transform:uppercase !important;
+  letter-spacing:.3px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+[data-theme="light"] .product-card .p-price {
+  font-family:'JetBrains Mono',monospace !important;
+  font-size:15px !important;
+  font-weight:900 !important;
+  color:#dc2626 !important;
+  text-align:right;
+}
+[data-theme="light"] .product-card .p-stock {
+  font-size:11px !important;
+  color:#6b7280 !important;
+  text-align:right;
+  font-family:'JetBrains Mono',monospace;
+}
+/* ── CART TABLE HEADER ── */
+#cartTableHeader {
+  display:none;
+  background:#374151;
+  padding:6px 14px;
+  flex-shrink:0;
+}
+[data-theme="light"] #cartTableHeader {
+  display:grid;
+  grid-template-columns:1fr 80px 75px 26px;
+  gap:4px;
+  align-items:center;
+}
+#cartTableHeader span {
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;
+  font-weight:700;
+  color:rgba(255,255,255,.75);
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+/* ── CART ITEMS AS RECEIPT TABLE (Mercado) ── */
+[data-theme="light"] .cart-item {
+  display:grid !important;
+  grid-template-columns:1fr 80px 75px 26px !important;
+  align-items:center !important;
+  gap:4px !important;
+  padding:7px 14px !important;
+}
+[data-theme="light"] .cart-item > span:first-child { display:none !important; }
+[data-theme="light"] .cart-item-info { min-width:0;overflow:hidden; }
+[data-theme="light"] .cart-item .qty-ctrl { justify-content:center; }
+[data-theme="light"] .cart-item .cart-subtotal { text-align:right; }
+[data-theme="light"] .cart-item .remove-btn { text-align:center; }
+
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
 body{font-family:var(--font);background:var(--bg);color:var(--text);transition:background 0.3s,color 0.3s;font-size:14px;line-height:1.5}
@@ -1340,6 +1517,18 @@ canvas{max-width:100%!important}
 
       <!-- ═══ POS ═══ -->
       <div id="page-pos" style="display:none">
+        <!-- MERCADO HEADER — visible solo en modo mercado -->
+        <div id="mercadoHeader">
+          <div id="mhNegocio">MI NEGOCIO</div>
+          <div id="mhClock">
+            <div id="mhTime">00:00:00</div>
+            <div id="mhDate">---</div>
+          </div>
+          <div id="mhTotalWrap">
+            <div id="mhTotalLbl">TOTAL VENTA</div>
+            <div id="mhTotal">$0.00</div>
+          </div>
+        </div>
         <div class="pos-layout">
           <!-- PRODUCTOS -->
           <div class="pos-products">
@@ -1357,6 +1546,13 @@ canvas{max-width:100%!important}
               <button class="btn btn-outline btn-sm" onclick="openAddProduct()">+ Producto</button>
             </div>
             <div class="cat-filters" id="catFilters"></div>
+            <!-- TABLA HEADER — visible solo en modo mercado -->
+            <div id="posTableHeader">
+              <span></span>
+              <span>Producto</span>
+              <span style="text-align:right">Precio</span>
+              <span style="text-align:right">Stock</span>
+            </div>
             <div class="products-grid" id="posProductsGrid"></div>
           </div>
           <!-- CARRITO -->
@@ -1367,6 +1563,13 @@ canvas{max-width:100%!important}
                 <button class="btn btn-sm btn-ghost" onclick="clearCart()">Limpiar</button>
               </div>
               <div style="font-size:11px;color:var(--text2);margin-top:4px" id="cartCount">0 productos</div>
+            </div>
+            <!-- CARRITO TABLA HEADER — visible solo en modo mercado -->
+            <div id="cartTableHeader">
+              <span>Descripción</span>
+              <span style="text-align:center">Cant</span>
+              <span style="text-align:right">Total</span>
+              <span></span>
             </div>
             <div class="cart-items" id="cartItems">
               <div class="section-empty"><div class="e-icon">🛒</div><p>Agrega productos al carrito</p></div>
@@ -7496,6 +7699,52 @@ if (_startAppOrig) {
     }, 300);
   };
 }
+
+// ── MERCADO HEADER — RELOJ EN TIEMPO REAL + MIRROR TOTAL ──
+(function() {
+  var _dias  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  var _meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  function mhTick() {
+    var mhTime = document.getElementById('mhTime');
+    var mhDate = document.getElementById('mhDate');
+    if (!mhTime) return;
+    var now = new Date();
+    var hh = now.getHours().toString().padStart(2,'0');
+    var mm = now.getMinutes().toString().padStart(2,'0');
+    var ss = now.getSeconds().toString().padStart(2,'0');
+    mhTime.textContent = hh + ':' + mm + ':' + ss;
+    if (mhDate) mhDate.textContent = _dias[now.getDay()] + ' ' + now.getDate() + ' ' + _meses[now.getMonth()];
+  }
+  setInterval(mhTick, 1000);
+  mhTick();
+  function _syncTotal() {
+    var src = document.getElementById('cartTotal');
+    var dst = document.getElementById('mhTotal');
+    if (!src || !dst) return;
+    dst.textContent = src.textContent || '$0.00';
+    var obs = new MutationObserver(function() {
+      dst.textContent = src.textContent || '$0.00';
+    });
+    obs.observe(src, { childList:true, subtree:true, characterData:true });
+  }
+  function _syncNegocio() {
+    var el = document.getElementById('mhNegocio');
+    if (!el) return;
+    try {
+      var cfg = (typeof DB !== 'undefined') ? (DB.get('config') || {}) : {};
+      var fc = cfg.factura || {};
+      el.textContent = (fc.negocio || cfg.negocio || 'MI NEGOCIO').toUpperCase();
+    } catch(e) {}
+  }
+  setTimeout(function(){ _syncTotal(); _syncNegocio(); }, 900);
+  var _scOrig = window.saveConfig;
+  if (_scOrig) {
+    window.saveConfig = function() {
+      _scOrig.apply(this, arguments);
+      setTimeout(_syncNegocio, 200);
+    };
+  }
+})();
 </script>
 </body>
 </html>
