@@ -39,28 +39,79 @@ El resaltado de sintaxis se ha deshabilitado debido al tamaño del código.
   --font:      'DM Sans', sans-serif;
   --display:   'Syne', sans-serif;
 }
+/* ── MODO MERCADO (retail/POS claro) ── */
 [data-theme="light"] {
-  --bg:        #f0f0f8;
-  --bg2:       #e8e8f5;
-  --bg3:       #dcdcf0;
+  --bg:        #f4f6f9;
+  --bg2:       #e8ecf2;
+  --bg3:       #d8dde8;
   --card:      #ffffff;
-  --card2:     #f5f5ff;
-  --border:    rgba(109,40,217,0.12);
-  --border2:   rgba(109,40,217,0.25);
-  --text:      #1a1a2e;
-  --text2:     #555577;
-  --text3:     #9999bb;
-  --accent:    #6d28d9;
-  --accent2:   #7c3aed;
-  --neon:      #059669;
-  --neon2:     #06d6a0;
-  --neonb:     #2563eb;
+  --card2:     #f8fafc;
+  --border:    rgba(15,23,42,0.1);
+  --border2:   rgba(15,23,42,0.2);
+  --text:      #0f172a;
+  --text2:     #334155;
+  --text3:     #94a3b8;
+  --accent:    #1d4ed8;
+  --accent2:   #2563eb;
+  --neon:      #16a34a;
+  --neon2:     #22c55e;
+  --neonb:     #0284c7;
   --warn:      #d97706;
   --danger:    #dc2626;
-  --success:   #059669;
-  --shadow:    rgba(109,40,217,0.12);
-  --glass:     rgba(255,255,255,0.92);
+  --success:   #16a34a;
+  --shadow:    rgba(0,0,0,0.1);
+  --glass:     rgba(255,255,255,0.96);
 }
+/* Overrides mercado: elementos clave del POS */
+[data-theme="light"] body { font-size:15px }
+[data-theme="light"] .topbar {
+  box-shadow:0 2px 10px rgba(0,0,0,0.07);
+  border-bottom:2px solid rgba(0,0,0,0.08);
+}
+[data-theme="light"] .sidebar {
+  border-right:2px solid rgba(0,0,0,0.08);
+  box-shadow:2px 0 10px rgba(0,0,0,0.05);
+}
+[data-theme="light"] .brand-icon {
+  background:linear-gradient(135deg,#1d4ed8,#16a34a);
+}
+[data-theme="light"] .total-val {
+  font-size:28px !important;
+  color:var(--text) !important;
+}
+[data-theme="light"] .neon-text {
+  color:#15803d !important;
+  font-weight:900 !important;
+}
+[data-theme="light"] .accent-glow {
+  color:#1d4ed8 !important;
+  text-shadow:none !important;
+}
+[data-theme="light"] .card {
+  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+  border:1px solid rgba(0,0,0,0.08);
+}
+[data-theme="light"] .btn-primary,
+[data-theme="light"] .btn[style*="var(--accent)"] {
+  box-shadow:0 2px 8px rgba(29,78,216,0.3);
+}
+[data-theme="light"] .stat-val { font-size:34px !important }
+/* Pill de cambio de tema */
+.btn-theme-mode {
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:20px;
+  border:1px solid var(--border2);background:var(--bg2);
+  color:var(--text);font-size:12px;font-weight:700;
+  cursor:pointer;font-family:var(--font);
+  transition:all 0.2s;white-space:nowrap;min-width:110px;
+  justify-content:center;
+}
+.btn-theme-mode:hover { border-color:var(--accent);color:var(--accent) }
+/* CSS-driven label swap — sin JS adicional */
+.lbl-dark  { display:inline }
+.lbl-light { display:none   }
+[data-theme="light"] .lbl-dark  { display:none   }
+[data-theme="light"] .lbl-light { display:inline }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
 body{font-family:var(--font);background:var(--bg);color:var(--text);transition:background 0.3s,color 0.3s;font-size:14px;line-height:1.5}
@@ -801,10 +852,12 @@ canvas{max-width:100%!important}
         <div id="netStatus" class="online" title="Estado de conexión"><div id="netDot"></div><span id="netStatusTxt">Online</span></div>
         <button class="btn-icon" onclick="mostrarCierreDiario()" title="Cierre del Día" style="color:var(--warn)">📊</button>
         <button class="btn-icon" onclick="if(window.syncVentasCloud)syncVentasCloud()" title="Sincronizar con la nube" style="color:var(--neon)">☁️</button>
-        <label class="theme-toggle" title="Cambiar tema">
-          <input type="checkbox" id="themeToggle" onchange="toggleTheme(this)">
-          <div class="theme-slider"></div>
-        </label>
+        <input type="checkbox" id="themeToggle" style="display:none" onchange="toggleTheme(this)">
+        <button class="btn-theme-mode" title="Cambiar modo visual"
+          onclick="setTheme(document.documentElement.getAttribute('data-theme')==='light'?'dark':'light')">
+          <span class="lbl-dark">🌙 Oscuro</span>
+          <span class="lbl-light">🏪 Mercado</span>
+        </button>
         <div class="user-badge">
           <div class="user-avatar" id="userAvatar">Z</div>
           <span class="user-name" id="userName2"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="295350474a4c454c4a5d5b4647404a5a1b191b1c694e44484045074a4644">[email&#160;protected]</a></span>
@@ -1228,7 +1281,7 @@ canvas{max-width:100%!important}
                 <label class="form-label">Tema</label>
                 <div class="flex gap-2">
                   <button class="btn btn-outline flex-1" onclick="setTheme(&#39;dark&#39;)" id="btnDark">🌙 Oscuro</button>
-                  <button class="btn btn-outline flex-1" onclick="setTheme(&#39;light&#39;)" id="btnLight">☀️ Claro</button>
+                  <button class="btn btn-outline flex-1" onclick="setTheme(&#39;light&#39;)" id="btnLight">🏪 Mercado</button>
                 </div>
               </div>
               <div class="form-group">
