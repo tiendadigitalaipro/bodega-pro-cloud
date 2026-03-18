@@ -1608,10 +1608,38 @@ canvas{max-width:100%!important}
         <label class="form-label">Notas</label>
         <textarea id="cli-notas" class="form-input" rows="2" placeholder="Observaciones..."></textarea>
       </div>
+      <div class="form-group">
+        <label class="form-label">PIN de Autorización <span style="color:var(--text3);font-size:11px">4 dígitos · para compras fiadas</span></label>
+        <input type="password" id="cli-pin" class="form-input" maxlength="4" placeholder="••••"
+          oninput="this.value=this.value.replace(/\D/g,'')"
+          style="text-align:center;font-size:20px;letter-spacing:8px;font-family:var(--mono)">
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal(&#39;modalCliente&#39;)">Cancelar</button>
       <button class="btn btn-primary" onclick="saveCliente()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: PIN CLIENTE -->
+<div class="modal-overlay" id="modalPinCliente" style="display:none">
+  <div class="modal" style="max-width:320px;text-align:center">
+    <div class="modal-header">
+      <span class="modal-title">🔑 PIN de Autorización</span>
+      <button class="btn-close" onclick="closeModal('modalPinCliente')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="pinClienteInfo" style="font-size:13px;color:var(--text2);margin-bottom:16px"></div>
+      <input type="password" id="pinClienteInput" class="form-input" maxlength="4" placeholder="••••"
+        oninput="this.value=this.value.replace(/\D/g,'')"
+        onkeydown="if(event.key==='Enter')verificarPinCliente()"
+        style="text-align:center;font-size:28px;letter-spacing:12px;font-family:var(--mono)">
+      <div id="pinClienteError" style="color:var(--danger);font-size:12px;margin-top:10px;display:none">❌ PIN incorrecto</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('modalPinCliente')">Cancelar</button>
+      <button class="btn btn-primary" onclick="verificarPinCliente()">✅ Autorizar</button>
     </div>
   </div>
 </div>
@@ -1625,6 +1653,21 @@ canvas{max-width:100%!important}
     </div>
     <div class="modal-body">
       <div id="cobroResumen"></div>
+
+      <!-- PANEL PAGO MIXTO -->
+      <div id="mixtoPanelCobro" style="display:none;margin-top:10px;background:var(--bg2);border-radius:10px;padding:12px">
+        <div style="font-size:11px;font-weight:700;letter-spacing:.5px;color:var(--text2);text-transform:uppercase;margin-bottom:8px">🔀 Detalle Pago Mixto</div>
+        <div id="mixtoEntradas"></div>
+        <div style="display:flex;gap:6px;margin-top:8px;align-items:center">
+          <select id="mixtoMetodo" class="form-select" style="flex:1;font-size:12px"></select>
+          <input type="number" id="mixtoMonto" class="form-input" step="0.01" placeholder="$0.00"
+            onkeydown="if(event.key==='Enter')agregarPagoMixto()"
+            style="width:90px;font-size:13px">
+          <button class="btn btn-primary btn-sm" onclick="agregarPagoMixto()" style="white-space:nowrap;font-size:12px">+ Agregar</button>
+        </div>
+        <div id="mixtoRemanente" style="margin-top:8px;font-size:12px;font-family:var(--mono)"></div>
+      </div>
+
       <div class="divider"></div>
       <div class="form-group">
         <label class="form-label">Cliente (opcional)</label>
@@ -1685,6 +1728,18 @@ function selPago(metodo) {
     btn.style.fontWeight = '900';
   }
   if (msg) msg.style.display = 'none';
+  // Mostrar/ocultar panel de pago mixto
+  var panel = document.getElementById('mixtoPanelCobro');
+  if (panel) {
+    if (metodo === 'Pago Mixto') {
+      STATE.pagosMixtos = [];
+      panel.style.display = 'block';
+      renderMixtoPanel();
+    } else {
+      panel.style.display = 'none';
+      STATE.pagosMixtos = [];
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1943,6 +1998,7 @@ let STATE = {
   simboloLocal: 'Bs',
   simboloRef: '$',
   cart: [],
+  pagosMixtos: [],
   payMethod: 'Efectivo $',
   charts: {},
   currentPage: 'dashboard',
@@ -2658,45 +2714,71 @@ function procesarVenta() {
 }
 
 function confirmarVenta() {
-  const total = STATE.cart.reduce((s,i) => s + (i.subtotal||0), 0);
-  const clienteId = parseInt(document.getElementById('cobro-cliente').value) || null;
-  const notas = document.getElementById('cobro-notas').value;
+  if (!STATE.cart.length) return showToast('El carrito está vacío','warn');
+  var total = STATE.cart.reduce(function(s,i){ return s+(i.subtotal||0); }, 0);
+  var clienteId = parseInt(document.getElementById('cobro-cliente').value) || null;
+  var notas = document.getElementById('cobro-notas').value;
 
-  const venta = {
+  // Validar Pago Mixto
+  if (STATE.payMethod === 'Pago Mixto') {
+    if (!STATE.pagosMixtos.length) return showToast('Agrega al menos un método de pago mixto','warn');
+    var pagado = STATE.pagosMixtos.reduce(function(s,p){ return s+p.monto; }, 0);
+    if (pagado < total - 0.001) return showToast('Faltan $'+(total-pagado).toFixed(2)+' por cubrir','error');
+  }
+
+  // Si es Fiado con cliente que tiene PIN, pedir PIN primero
+  if (STATE.payMethod === 'Fiado' && clienteId) {
+    var clientes = DB.get('clientes') || [];
+    var cliCheck = clientes.find(function(c){ return c.id === clienteId; });
+    if (cliCheck && cliCheck.pin) {
+      pedirPinCliente(clienteId, function(autorizado) {
+        if (autorizado) _ejecutarVenta(total, clienteId, notas);
+      });
+      return;
+    }
+  }
+
+  _ejecutarVenta(total, clienteId, notas);
+}
+
+function _ejecutarVenta(total, clienteId, notas) {
+  var esMixto = STATE.payMethod === 'Pago Mixto';
+  var venta = {
     id: Date.now(),
     fecha: new Date().toISOString(),
-    items: STATE.cart.map(i => ({...i})),
+    items: STATE.cart.map(function(i){ return Object.assign({}, i); }),
     totalUSD: total,
     totalBs: total * STATE.tasa,
-    metodo: STATE.payMethod,
+    metodo: esMixto ? 'Pago Mixto' : STATE.payMethod,
+    pagos: esMixto ? STATE.pagosMixtos.slice() : null,
     cliente: clienteId,
-    notas,
+    notas: notas,
     tasa: STATE.tasa,
   };
 
   // Guardar venta
-  const ventas = DB.get('ventas') || [];
+  var ventas = DB.get('ventas') || [];
   ventas.push(venta);
   DB.set('ventas', ventas);
 
   // Reducir stock
-  const prods = DB.get('productos') || [];
-  STATE.cart.forEach(item => {
-    const p = prods.find(p => p.id === item.productoId);
+  var prods = DB.get('productos') || [];
+  STATE.cart.forEach(function(item) {
+    var p = prods.find(function(p){ return p.id === item.productoId; });
     if (p) p.stock = Math.max(0, p.stock - item.qty);
   });
   DB.set('productos', prods);
 
   // Fiado: agregar deuda
   if (STATE.payMethod === 'Fiado' && clienteId) {
-    const clientes = DB.get('clientes') || [];
-    const cli = clientes.find(c => c.id === clienteId);
+    var clientes = DB.get('clientes') || [];
+    var cli = clientes.find(function(c){ return c.id === clienteId; });
     if (cli) { cli.deuda = (cli.deuda || 0) + total; cli.ultimaVenta = new Date().toISOString(); }
     DB.set('clientes', clientes);
   }
 
-  // Registrar en caja — diferenciando efectivo de electrónico
-  var metodoPago = STATE.payMethod || '';
+  // Registrar en caja
+  var metodoPago = venta.metodo || '';
   var esEfectivoUSD = metodoPago === 'Efectivo $';
   var esEfectivoBs  = metodoPago === 'Efectivo Bs';
   var esFiado       = metodoPago === 'Fiado';
@@ -2721,19 +2803,112 @@ function confirmarVenta() {
   closeModal('modalCobro');
   STATE.ultimaVentaId = venta.id;
   STATE.cart = [];
+  STATE.pagosMixtos = [];
   var elMR = document.getElementById('montoRecibido');
   if (elMR) elMR.value = '';
   var elVI = document.getElementById('vueltoInfo');
   if (elVI) elVI.style.display = 'none';
 
-  // Apertura de gaveta si pago en efectivo
   try { abrirGavetaDinero(); } catch(e) {}
-  // Sync automático a la nube después de cada venta
   setTimeout(function(){ if(window.syncVentasCloud) window.syncVentasCloud(); }, 1000);
-  // Mostrar recibo en modal
   showRecibo(venta);
   renderCart();
   renderPosProducts();
+}
+
+// ── PAGO MIXTO ────────────────────────────────────────────────
+function renderMixtoPanel() {
+  var total = STATE.cart.reduce(function(s,i){ return s+(i.subtotal||0); }, 0);
+  var pagado = STATE.pagosMixtos.reduce(function(s,p){ return s+p.monto; }, 0);
+  var remanente = total - pagado;
+
+  // Llenar selector de métodos (excluir Mixto y Fiado)
+  var sel = document.getElementById('mixtoMetodo');
+  if (sel) {
+    var metodos = PAYMENT_METHODS.filter(function(m){ return m.id !== 'mixto' && m.id !== 'fiado'; });
+    sel.innerHTML = metodos.map(function(m){
+      return '<option value="'+m.label+'">'+m.icon+' '+m.label+'</option>';
+    }).join('');
+  }
+
+  // Render entradas agregadas
+  var el = document.getElementById('mixtoEntradas');
+  if (el) {
+    if (!STATE.pagosMixtos.length) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:12px;text-align:center;padding:6px 0">Sin pagos agregados aún</div>';
+    } else {
+      el.innerHTML = STATE.pagosMixtos.map(function(p, i){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">'
+          +'<span style="font-size:12px;color:var(--text)">'+p.metodo+'</span>'
+          +'<div style="display:flex;align-items:center;gap:8px">'
+          +'<span style="font-family:var(--mono);color:var(--neon);font-size:13px;font-weight:700">$'+p.monto.toFixed(2)+'</span>'
+          +'<button onclick="eliminarPagoMixto('+i+')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;line-height:1">✕</button>'
+          +'</div></div>';
+      }).join('');
+    }
+  }
+
+  // Remanente
+  var rem = document.getElementById('mixtoRemanente');
+  if (rem) {
+    if (remanente > 0.001) {
+      rem.innerHTML = '<span style="color:var(--warn)">⚠️ Falta: <strong>$'+remanente.toFixed(2)+'</strong></span>';
+    } else if (remanente < -0.001) {
+      rem.innerHTML = '<span style="color:var(--neon)">✅ Cubierto · Vuelto: <strong>$'+Math.abs(remanente).toFixed(2)+'</strong></span>';
+    } else {
+      rem.innerHTML = '<span style="color:var(--neon)">✅ Total cubierto exactamente</span>';
+    }
+  }
+}
+
+function agregarPagoMixto() {
+  var metodo = document.getElementById('mixtoMetodo').value;
+  var monto = parseFloat(document.getElementById('mixtoMonto').value) || 0;
+  if (!monto || monto <= 0) return showToast('Ingresa un monto válido','warn');
+  STATE.pagosMixtos.push({ metodo: metodo, monto: monto });
+  document.getElementById('mixtoMonto').value = '';
+  renderMixtoPanel();
+}
+
+function eliminarPagoMixto(idx) {
+  STATE.pagosMixtos.splice(idx, 1);
+  renderMixtoPanel();
+}
+
+// ── PIN DINÁMICO POR CLIENTE ──────────────────────────────────
+window._pinCallback = null;
+
+function pedirPinCliente(clienteId, callback) {
+  var clientes = DB.get('clientes') || [];
+  var c = clientes.find(function(x){ return x.id === clienteId; });
+  if (!c || !c.pin) { callback(true); return; }
+  window._pinCallback = { clienteId: clienteId, callback: callback };
+  var info = document.getElementById('pinClienteInfo');
+  if (info) info.textContent = 'Ingresa el PIN de ' + c.nombre + ' para autorizar la compra fiada.';
+  var inp = document.getElementById('pinClienteInput');
+  if (inp) inp.value = '';
+  var err = document.getElementById('pinClienteError');
+  if (err) err.style.display = 'none';
+  openModal('modalPinCliente');
+}
+
+function verificarPinCliente() {
+  if (!window._pinCallback) return;
+  var inp = document.getElementById('pinClienteInput');
+  var pinIngresado = inp ? inp.value.trim() : '';
+  var clientes = DB.get('clientes') || [];
+  var c = clientes.find(function(x){ return x.id === window._pinCallback.clienteId; });
+  if (c && c.pin === pinIngresado) {
+    closeModal('modalPinCliente');
+    var cb = window._pinCallback.callback;
+    window._pinCallback = null;
+    cb(true);
+  } else {
+    var err = document.getElementById('pinClienteError');
+    if (err) err.style.display = 'block';
+    if (inp) inp.value = '';
+    setTimeout(function(){ if(err) err.style.display='none'; }, 2000);
+  }
 }
 
 function showRecibo(venta) {
@@ -3377,7 +3552,7 @@ function renderClientes() {
 
 function openAddCliente() {
   stext('modalClienteTitle', 'Nuevo Cliente');
-  ['cli-id','cli-nombre','cli-telefono','cli-cedula','cli-notas'].forEach(function(id){
+  ['cli-id','cli-nombre','cli-telefono','cli-cedula','cli-notas','cli-pin'].forEach(function(id){
     document.getElementById(id).value = '';
   });
   document.getElementById('cli-limite').value = '50';
@@ -3394,6 +3569,7 @@ function editCliente(id) {
   document.getElementById('cli-cedula').value = c.cedula || '';
   document.getElementById('cli-limite').value = c.limite || 50;
   document.getElementById('cli-notas').value = c.notas || '';
+  document.getElementById('cli-pin').value = c.pin || '';
   openModal('modalCliente');
 }
 
@@ -3403,6 +3579,8 @@ function saveCliente() {
   var clientes = DB.get('clientes') || [];
   var existingId = parseInt(document.getElementById('cli-id').value) || 0;
   var existing = existingId ? clientes.find(function(c){ return c.id === existingId; }) : null;
+  var pinVal = document.getElementById('cli-pin').value.trim();
+  if (pinVal && pinVal.length !== 4) return showToast('El PIN debe tener exactamente 4 dígitos','error');
   var cli = {
     id: existingId || Date.now(),
     nombre: nombre,
@@ -3410,6 +3588,7 @@ function saveCliente() {
     cedula: document.getElementById('cli-cedula').value,
     limite: parseFloat(document.getElementById('cli-limite').value) || 50,
     notas: document.getElementById('cli-notas').value,
+    pin: pinVal || null,
     deuda: existing ? (existing.deuda || 0) : 0,
     ultimaVenta: existing ? (existing.ultimaVenta || null) : null,
   };
