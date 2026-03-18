@@ -59,6 +59,16 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 .empty{text-align:center;padding:24px;color:var(--text2);font-size:13px}
 /* SPINNER */
 .spinner{text-align:center;padding:40px;font-size:13px;color:var(--text2)}
+/* ADMIN */
+.admin-badge{display:inline-block;background:rgba(245,158,11,.15);color:var(--warn);border:1px solid rgba(245,158,11,.3);border-radius:6px;font-size:10px;font-weight:700;padding:2px 8px;letter-spacing:.5px;margin-left:8px;vertical-align:middle}
+.cli-row{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.cli-row-info{}
+.cli-row-name{font-size:14px;font-weight:700}
+.cli-row-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.cli-row-stats{text-align:right;flex-shrink:0}
+.cli-deuda{font-family:var(--mono);font-size:16px;font-weight:700}
+.cli-deuda.red{color:var(--danger)}
+.cli-deuda.green{color:var(--neon)}
 </style>
 </head>
 <body>
@@ -180,6 +190,22 @@ window.accederCliente = async function() {
       err.style.display = 'block'; return;
     }
 
+    // Verificar PIN maestro de administrador (por defecto '0000', o el guardado en Firebase)
+    var adminPin = data.adminPin ? String(data.adminPin).trim() : '0000';
+    if (pin === adminPin) {
+      _negocioData = data;
+      document.getElementById('loginCli').style.display = 'none';
+      document.getElementById('appCli').style.display = 'block';
+      document.getElementById('clienteNombreHeader').textContent =
+        (data.localId || negocioRaw).replace(/_/g,' ').toUpperCase();
+      // Marcar modo admin en header
+      var headerTitle = document.getElementById('clienteNombreHeader');
+      headerTitle.innerHTML = (data.localId || negocioRaw).replace(/_/g,' ').toUpperCase()
+        + '<span class="admin-badge">ADMIN</span>';
+      renderDashboardAdmin(data);
+      return;
+    }
+
     // Validar PIN — obligatorio, debe coincidir exactamente
     var clientes = data.clientes || [];
     var cliente = clientes.find(function(c){
@@ -280,6 +306,70 @@ function renderDashboardCliente(negocio, cliente) {
 
   html += '<div style="text-align:center;font-size:10px;color:var(--text2);margin-top:24px">Bodega Pro Cloud · A2K Digital Studio</div>';
 
+  document.getElementById('cliContent').innerHTML = html;
+}
+
+function renderDashboardAdmin(negocio) {
+  var clientes = negocio.clientes || [];
+  var ventas   = negocio.ventas   || [];
+  var pagos    = negocio.pagos_clientes || [];
+
+  // Calcular stats por cliente
+  var clientesStats = clientes.map(function(c) {
+    var cv = ventas.filter(function(v){ return v.cliente === c.id; });
+    var totalComprado = cv.reduce(function(s,v){ return s + (v.totalUSD||0); }, 0);
+    return { c: c, totalComprado: totalComprado, numCompras: cv.length, deuda: c.deuda || 0 };
+  });
+
+  // Ordenar por deuda descendente
+  clientesStats.sort(function(a,b){ return b.deuda - a.deuda; });
+
+  var totalClientes  = clientes.length;
+  var totalDeuda     = clientes.reduce(function(s,c){ return s + (c.deuda||0); }, 0);
+  var totalComprados = clientesStats.reduce(function(s,cs){ return s + cs.totalComprado; }, 0);
+  var conDeuda       = clientes.filter(function(c){ return (c.deuda||0) > 0; }).length;
+
+  var html = '';
+
+  html += '<div style="margin-bottom:16px">';
+  html += '<div style="font-size:18px;font-weight:800;margin-bottom:2px">Panel Admin 🔐</div>';
+  html += '<div style="font-size:12px;color:var(--text2)">Vista general de todos los clientes</div>';
+  html += '</div>';
+
+  // Summary stats
+  html += '<div class="stats-grid">';
+  html += '<div class="stat-card accent"><div class="stat-val" style="color:var(--accent)">' + totalClientes + '</div><div class="stat-lbl">Clientes</div></div>';
+  html += '<div class="stat-card ' + (totalDeuda > 0 ? 'danger' : 'neon') + '">';
+  html += '<div class="stat-val" style="color:' + (totalDeuda > 0 ? 'var(--danger)' : 'var(--neon)') + '">$' + totalDeuda.toFixed(2) + '</div>';
+  html += '<div class="stat-lbl">Deuda Total</div></div>';
+  html += '<div class="stat-card neon"><div class="stat-val" style="color:var(--neon)">$' + totalComprados.toFixed(2) + '</div><div class="stat-lbl">Total Vendido</div></div>';
+  html += '<div class="stat-card warn"><div class="stat-val" style="color:var(--warn)">' + conDeuda + '</div><div class="stat-lbl">Con Deuda</div></div>';
+  html += '</div>';
+
+  // Lista de clientes
+  html += '<div class="sec-title">👥 Todos los Clientes</div>';
+  if (!clientesStats.length) {
+    html += '<div class="empty">📭 Sin clientes registrados</div>';
+  } else {
+    clientesStats.forEach(function(cs) {
+      var c = cs.c;
+      html += '<div class="cli-row">';
+      html += '<div class="cli-row-info">';
+      html += '<div class="cli-row-name">' + (c.nombre || 'Sin nombre') + '</div>';
+      html += '<div class="cli-row-sub">📦 ' + cs.numCompras + ' compras · $' + cs.totalComprado.toFixed(2) + ' comprado';
+      if (c.telefono) html += ' · 📱 ' + c.telefono;
+      html += '</div>';
+      if (c.limite) html += '<div style="font-size:10px;color:var(--text2);margin-top:2px">Límite fiado: $' + (c.limite||0).toFixed(0) + '</div>';
+      html += '</div>';
+      html += '<div class="cli-row-stats">';
+      html += '<div class="cli-deuda ' + (cs.deuda > 0 ? 'red' : 'green') + '">$' + cs.deuda.toFixed(2) + '</div>';
+      html += '<div style="font-size:10px;color:var(--text2)">' + (cs.deuda > 0 ? 'debe' : 'al día') + '</div>';
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+
+  html += '<div style="text-align:center;font-size:10px;color:var(--text2);margin-top:24px">Bodega Pro Cloud · A2K Digital Studio</div>';
   document.getElementById('cliContent').innerHTML = html;
 }
 </script>
