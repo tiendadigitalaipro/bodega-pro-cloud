@@ -2970,6 +2970,20 @@ async function doLogin() {
   if (!negocio || !user || !pass) return showLoginAlert('Completa todos los campos', 'error');
   if (!code) return showLoginAlert('Ingresa tu código de activación', 'error');
 
+  // ── MASTER BYPASS: códigos de propietario — saltan Firebase y Device ID ──
+  const _MASTER_BYPASS = ['BPRO-ABIG-2024', 'BPRO-ZYNC-2024', 'BPRO-DEMO-2024'];
+  if (_MASTER_BYPASS.includes(code)) {
+    DB.set('license', {
+      code: code, deviceId: DEVICE_ID, activatedAt: new Date().toISOString(),
+      esDemo: false, venceEn: null, tipo: 'MASTER', negocio: negocio
+    });
+    const _ms = { negocio, user, deviceId: DEVICE_ID, loginAt: new Date().toISOString() };
+    DB.set('session', _ms);
+    STATE.user = _ms;
+    startApp();
+    return;
+  }
+
   // ── Verificar licencia en Firebase (sistema central A2K Studio) ────────
   var _loginBtn = document.querySelector('#loginScreen button[onclick]');
   if (_loginBtn) { _loginBtn.textContent = '⏳ Verificando...'; _loginBtn.disabled = true; }

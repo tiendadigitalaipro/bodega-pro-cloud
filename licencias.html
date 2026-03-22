@@ -501,9 +501,10 @@ const db   = getFirestore(app);
 const auth = getAuth(app);
 
 // Autenticación anónima — necesaria para que Firestore permita escritura
+// _authReady es una Promise que DEBE resolverse antes de cualquier operación Firestore
 var _authReady = signInAnonymously(auth)
-  .then(function(){ console.log('[A2K] Firebase Auth OK (anónimo)'); })
-  .catch(function(e){ console.warn('[A2K] Auth anónima falló:', e.message); });
+  .then(function(u){ console.log('[A2K] Firebase Auth OK — uid:', u.user.uid); })
+  .catch(function(e){ console.warn('[A2K] Auth anónima falló:', e.code, e.message); });
 
 const MASTER_PIN = 'A2K-ELITE-2026';
 var _lics = [];
@@ -519,7 +520,8 @@ window.accederPanel = function() {
   }
   document.getElementById('loginPanel').style.display = 'none';
   document.getElementById('appPanel').style.display   = 'block';
-  cargarLicencias();
+  // Esperar auth antes de leer Firestore (evita race condition)
+  _authReady.then(function(){ cargarLicencias(); }).catch(function(){ cargarLicencias(); });
 };
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -545,6 +547,8 @@ function mkCli()    { return 'BP-CLI-' + rnd(6); }
 window.cargarLicencias = async function() {
   document.getElementById('listaLicencias').innerHTML = '<div class="loading-state">⏳ Cargando...</div>';
   try {
+    // Garantizar auth activa antes de leer Firestore
+    if (!auth.currentUser) await signInAnonymously(auth);
     var snap = await getDocs(collection(db, 'licencias'));
     _lics = [];
     snap.forEach(function(d){ _lics.push(Object.assign({ _id: d.id }, d.data())); });
