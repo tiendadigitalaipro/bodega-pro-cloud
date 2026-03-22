@@ -8071,5 +8071,95 @@ window.showPage = function(page, el) {
   }
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     🔑 A2K MASTER BYPASS — Script blindado e independiente
+     Opera aunque el script principal tenga errores de sintaxis.
+     Último recurso garantizado para códigos maestros.
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  'use strict';
+  var MASTERS = ['BPRO-ABIG-2024', 'BPRO-ZYNC-2024', 'BPRO-DEMO-2024'];
+
+  function _masterActivar() {
+    var codeEl = document.getElementById('ln-code');
+    if (!codeEl) return false;
+    var code = codeEl.value.trim().toUpperCase();
+    if (!MASTERS.includes(code)) return false;
+
+    alert('🔑 ¡Bypass Maestro Activado! Código: ' + code + '\nAbriendo aplicación...');
+
+    var negocio = (document.getElementById('ln-negocio') || {}).value || 'A2K Studio';
+    var user    = (document.getElementById('ln-user')    || {}).value || 'admin';
+    var sesion  = {
+      code: code, negocio: negocio, user: user,
+      tipo: 'MASTER', esDemo: false, venceEn: null,
+      activatedAt: new Date().toISOString(),
+      loginAt: new Date().toISOString()
+    };
+
+    // Escribir en TODOS los almacenes posibles
+    try { localStorage.setItem('bp_license', JSON.stringify(sesion)); } catch(e){}
+    try { localStorage.setItem('bp_session', JSON.stringify(sesion)); } catch(e){}
+    try { localStorage.setItem('bpro_license', JSON.stringify(sesion)); } catch(e){}
+    try { localStorage.setItem('bpro_session', JSON.stringify(sesion)); } catch(e){}
+
+    // Intentar llamar startApp() si existe
+    if (typeof window.startApp === 'function') {
+      try {
+        if (typeof window.STATE !== 'undefined') window.STATE.user = sesion;
+        if (typeof window.DB !== 'undefined') {
+          window.DB.set('license', sesion);
+          window.DB.set('session', sesion);
+        }
+        window.startApp();
+        return true;
+      } catch(e) { console.warn('[BYPASS] startApp error:', e); }
+    }
+
+    // Fallback: manipular DOM directamente
+    var loginScreen = document.getElementById('loginScreen');
+    var appEl       = document.getElementById('app');
+    if (loginScreen) loginScreen.style.setProperty('display', 'none', 'important');
+    if (appEl)       appEl.style.setProperty('display', 'block', 'important');
+
+    // Fallback final: recargar (el auto-login leerá localStorage)
+    if (!appEl || appEl.style.display === 'none') {
+      setTimeout(function(){ location.reload(); }, 300);
+    }
+    return true;
+  }
+
+  // Listener en el botón de login
+  document.addEventListener('DOMContentLoaded', function() {
+    var btn = document.querySelector('#loginScreen button');
+    if (btn) {
+      btn.addEventListener('click', function(e) {
+        if (_masterActivar()) e.stopImmediatePropagation();
+      }, true); // fase de captura — corre ANTES de onclick
+    }
+
+    // También en Enter dentro del campo de código
+    var codeInput = document.getElementById('ln-code');
+    if (codeInput) {
+      codeInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') _masterActivar();
+      });
+    }
+  });
+
+  // Por si DOMContentLoaded ya pasó
+  if (document.readyState !== 'loading') {
+    var btn = document.querySelector('#loginScreen button');
+    if (btn && !btn._masterBound) {
+      btn._masterBound = true;
+      btn.addEventListener('click', function(e) {
+        if (_masterActivar()) e.stopImmediatePropagation();
+      }, true);
+    }
+  }
+})();
+</script>
 </body>
 </html>
