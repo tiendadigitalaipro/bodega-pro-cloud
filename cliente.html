@@ -110,6 +110,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const cfg = {
   apiKey:"AIzaSyCfAh2-K5oe1XPVFvB4jbN62nSOTFq22jo",
@@ -119,11 +120,22 @@ const cfg = {
   messagingSenderId:"245806066684",
   appId:"1:245806066684:web:e45935a6bbe96c9a17a079"
 };
-const app = initializeApp(cfg);
-const db = getFirestore(app);
+const app  = initializeApp(cfg);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+
+// Auth anónima — necesaria para que Firestore permita lecturas
+const _authReady = signInAnonymously(auth)
+  .then(function(u){ console.log('[A2K Cliente] Auth OK, uid:', u.user.uid); })
+  .catch(function(e){ console.warn('[A2K Cliente] Auth falló:', e.message); });
 
 var _clienteData = null;
 var _negocioData = null;
+
+// Función helper: 4 dígitos con ceros a la izquierda
+function codigoProd(id) {
+  return String(parseInt(id) || 0).padStart(4, '0');
+}
 
 // Genera todas las variantes posibles de un nombre de negocio
 function generarCandidatos(nombre) {
@@ -161,6 +173,9 @@ window.accederCliente = async function() {
   if (btn) { btn.textContent = '⏳ Verificando...'; btn.disabled = true; }
 
   try {
+    // Garantizar auth activa antes de tocar Firestore
+    if (!auth.currentUser) await signInAnonymously(auth);
+
     var data = null;
     var docIdEncontrado = null;
 
@@ -282,9 +297,25 @@ function renderDashboardCliente(negocio, cliente) {
       html += '<div class="compra-monto">$' + v.totalUSD.toFixed(2) + '</div></div>';
       if (v.items && v.items.length) {
         html += '<div class="compra-items">';
+        // Tabla de items con código de 4 dígitos
+        html += '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px">';
+        html += '<thead><tr style="color:var(--text2);border-bottom:1px solid var(--border)">'
+          + '<th style="text-align:left;padding:2px 4px;font-weight:600">Cód.</th>'
+          + '<th style="text-align:left;padding:2px 4px;font-weight:600">Producto</th>'
+          + '<th style="text-align:center;padding:2px 4px;font-weight:600">Cant.</th>'
+          + '<th style="text-align:right;padding:2px 4px;font-weight:600">Total</th>'
+          + '</tr></thead><tbody>';
         v.items.forEach(function(it){
-          html += '• ' + it.nombre + ' x' + it.qty + ' — $' + it.subtotal.toFixed(2) + '<br>';
+          html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.04)">'
+            + '<td style="padding:3px 4px;font-family:monospace;color:var(--accent);font-weight:700">'
+              + codigoProd(it.productoId) + '</td>'
+            + '<td style="padding:3px 4px;color:var(--text)">' + (it.nombre || '—') + '</td>'
+            + '<td style="padding:3px 4px;text-align:center;color:var(--text2)">x' + it.qty + '</td>'
+            + '<td style="padding:3px 4px;text-align:right;color:var(--neon);font-family:monospace;font-weight:700">'
+              + '$' + (it.subtotal||0).toFixed(2) + '</td>'
+            + '</tr>';
         });
+        html += '</tbody></table>';
         html += '</div>';
       }
       html += '<div class="compra-metodo">💳 ' + v.metodo + '</div>';
@@ -356,6 +387,7 @@ function renderDashboardAdmin(negocio) {
       html += '<div class="cli-row">';
       html += '<div class="cli-row-info">';
       html += '<div class="cli-row-name">' + (c.nombre || 'Sin nombre') + '</div>';
+      html += '<div style="font-size:10px;color:var(--accent);font-family:monospace;font-weight:700;margin-bottom:2px">Código: ' + codigoProd(c.id) + '</div>';
       html += '<div class="cli-row-sub">📦 ' + cs.numCompras + ' compras · $' + cs.totalComprado.toFixed(2) + ' comprado';
       if (c.telefono) html += ' · 📱 ' + c.telefono;
       html += '</div>';
