@@ -8073,91 +8073,120 @@ window.showPage = function(page, el) {
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════════
-     🔑 A2K MASTER BYPASS — Script blindado e independiente
+     🔑 A2K MASTER BYPASS v3 — Script blindado e independiente
      Opera aunque el script principal tenga errores de sintaxis.
-     Último recurso garantizado para códigos maestros.
      ═══════════════════════════════════════════════════════════════ -->
 <script>
 (function() {
   'use strict';
   var MASTERS = ['BPRO-ABIG-2024', 'BPRO-ZYNC-2024', 'BPRO-DEMO-2024'];
 
+  function _abrirApp(negocio, user, code) {
+    // 1. Guardar sesión en TODOS los almacenes posibles
+    var sesion = {
+      code: code, negocio: negocio, user: user,
+      tipo: 'MASTER', esDemo: false, venceEn: null,
+      activatedAt: new Date().toISOString(), loginAt: new Date().toISOString()
+    };
+    var keys = ['bp_license','bp_session','bpro_license','bpro_session','bodegapro_lic','bodegapro_ses'];
+    keys.forEach(function(k){ try{ localStorage.setItem(k, JSON.stringify(sesion)); }catch(e){} });
+
+    // 2. Eliminar TODOS los <style> dinámicos que bloquean #app
+    var styles = document.querySelectorAll('style');
+    styles.forEach(function(s){
+      if (s.textContent && s.textContent.indexOf('#app') !== -1 && s.textContent.indexOf('none') !== -1) {
+        s.parentNode.removeChild(s);
+      }
+    });
+
+    // 3. Mostrar #app / ocultar #loginScreen con doble fuerza
+    var loginEl = document.getElementById('loginScreen');
+    var appEl   = document.getElementById('app');
+    var spinners = document.querySelectorAll('.loading, .spinner, #loadingOverlay, #splashScreen, [id*="loading"], [id*="spinner"]');
+
+    if (loginEl) { loginEl.style.cssText += ';display:none!important'; }
+    if (appEl)   { appEl.style.cssText   += ';display:flex!important'; }
+    spinners.forEach(function(s){ s.style.setProperty('display','none','important'); });
+
+    // 4. Intentar startApp() con STATE y DB correctos
+    try {
+      if (typeof window.STATE !== 'undefined') {
+        window.STATE.user = { negocio: negocio, user: user, deviceId: 'DEV-MASTER', loginAt: sesion.loginAt };
+        window.STATE.tasa = window.STATE.tasa || 649;
+      }
+      if (typeof window.DB !== 'undefined') {
+        window.DB.set('license', sesion);
+        window.DB.set('session', { negocio: negocio, user: user, deviceId: 'DEV-MASTER', loginAt: sesion.loginAt });
+      }
+      if (typeof window.startApp === 'function') { window.startApp(); return; }
+    } catch(err) { console.warn('[A2K BYPASS] startApp falló:', err.message); }
+
+    // 5. Si startApp no existe o falló — inicializar UI mínima manualmente
+    try {
+      // Topbar: nombre de usuario y fecha
+      var now = new Date();
+      var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+      var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      var fechaStr = dias[now.getDay()] + ', ' + now.getDate() + ' de ' + meses[now.getMonth()];
+      ['userName','userName2'].forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=user; });
+      ['userAvatar','userAvatarTop'].forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=user.charAt(0).toUpperCase(); });
+      var dateEl = document.getElementById('topbarDate'); if(dateEl) dateEl.textContent = fechaStr;
+      var greetEl = document.getElementById('dashGreeting');
+      var h = now.getHours();
+      if(greetEl) greetEl.textContent = (h<12?'Buenos días':h<18?'Buenas tardes':'Buenas noches') + ', ' + user + ' 👋';
+      var negEl = document.getElementById('dashNegocio'); if(negEl) negEl.textContent = negocio + ' · Resumen del día';
+      // Cloud status
+      var csTxt = document.getElementById('cloudStatusTxt'); if(csTxt) csTxt.textContent = 'Cloud Offline';
+      // Llamar renders si existen
+      ['renderDashboard','renderPaymentBtns','renderInventario','renderHistorial'].forEach(function(fn){
+        if(typeof window[fn]==='function') { try{ window[fn](); }catch(e){} }
+      });
+      // Navegar al dashboard
+      if(typeof window.showPage==='function') { try{ window.showPage('dashboard'); }catch(e){} }
+    } catch(uiErr) { console.warn('[A2K BYPASS] UI manual falló:', uiErr.message); }
+
+    // 6. Fallback FINAL: si #app sigue invisible, recargar (auto-login leerá localStorage)
+    setTimeout(function(){
+      var a = document.getElementById('app');
+      var computed = window.getComputedStyle(a||document.body).display;
+      if (!a || computed === 'none') {
+        console.warn('[A2K BYPASS] App no visible, recargando...');
+        location.reload();
+      }
+    }, 800);
+  }
+
   function _masterActivar() {
     var codeEl = document.getElementById('ln-code');
     if (!codeEl) return false;
     var code = codeEl.value.trim().toUpperCase();
     if (!MASTERS.includes(code)) return false;
-
+    var negocio = (document.getElementById('ln-negocio')||{}).value || 'A2K Studio';
+    var user    = (document.getElementById('ln-user')||{}).value    || 'admin';
     alert('🔑 ¡Bypass Maestro Activado! Código: ' + code + '\nAbriendo aplicación...');
-
-    var negocio = (document.getElementById('ln-negocio') || {}).value || 'A2K Studio';
-    var user    = (document.getElementById('ln-user')    || {}).value || 'admin';
-    var sesion  = {
-      code: code, negocio: negocio, user: user,
-      tipo: 'MASTER', esDemo: false, venceEn: null,
-      activatedAt: new Date().toISOString(),
-      loginAt: new Date().toISOString()
-    };
-
-    // Escribir en TODOS los almacenes posibles
-    try { localStorage.setItem('bp_license', JSON.stringify(sesion)); } catch(e){}
-    try { localStorage.setItem('bp_session', JSON.stringify(sesion)); } catch(e){}
-    try { localStorage.setItem('bpro_license', JSON.stringify(sesion)); } catch(e){}
-    try { localStorage.setItem('bpro_session', JSON.stringify(sesion)); } catch(e){}
-
-    // Intentar llamar startApp() si existe
-    if (typeof window.startApp === 'function') {
-      try {
-        if (typeof window.STATE !== 'undefined') window.STATE.user = sesion;
-        if (typeof window.DB !== 'undefined') {
-          window.DB.set('license', sesion);
-          window.DB.set('session', sesion);
-        }
-        window.startApp();
-        return true;
-      } catch(e) { console.warn('[BYPASS] startApp error:', e); }
-    }
-
-    // Fallback: manipular DOM directamente
-    var loginScreen = document.getElementById('loginScreen');
-    var appEl       = document.getElementById('app');
-    if (loginScreen) loginScreen.style.setProperty('display', 'none', 'important');
-    if (appEl)       appEl.style.setProperty('display', 'block', 'important');
-
-    // Fallback final: recargar (el auto-login leerá localStorage)
-    if (!appEl || appEl.style.display === 'none') {
-      setTimeout(function(){ location.reload(); }, 300);
-    }
+    _abrirApp(negocio, user, code);
     return true;
   }
 
-  // Listener en el botón de login
-  document.addEventListener('DOMContentLoaded', function() {
+  function _bind() {
     var btn = document.querySelector('#loginScreen button');
-    if (btn) {
-      btn.addEventListener('click', function(e) {
-        if (_masterActivar()) e.stopImmediatePropagation();
-      }, true); // fase de captura — corre ANTES de onclick
-    }
-
-    // También en Enter dentro del campo de código
-    var codeInput = document.getElementById('ln-code');
-    if (codeInput) {
-      codeInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') _masterActivar();
-      });
-    }
-  });
-
-  // Por si DOMContentLoaded ya pasó
-  if (document.readyState !== 'loading') {
-    var btn = document.querySelector('#loginScreen button');
-    if (btn && !btn._masterBound) {
-      btn._masterBound = true;
+    if (btn && !btn._a2kBound) {
+      btn._a2kBound = true;
       btn.addEventListener('click', function(e) {
         if (_masterActivar()) e.stopImmediatePropagation();
       }, true);
     }
+    var inp = document.getElementById('ln-code');
+    if (inp && !inp._a2kBound) {
+      inp._a2kBound = true;
+      inp.addEventListener('keydown', function(e){ if(e.key==='Enter') _masterActivar(); });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _bind);
+  } else {
+    _bind();
   }
 })();
 </script>
