@@ -486,6 +486,7 @@ select.form-input{cursor:pointer}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const cfg = {
   apiKey:"AIzaSyCfAh2-K5oe1XPVFvB4jbN62nSOTFq22jo",
@@ -495,8 +496,14 @@ const cfg = {
   messagingSenderId:"245806066684",
   appId:"1:245806066684:web:e45935a6bbe96c9a17a079"
 };
-const app = initializeApp(cfg);
-const db  = getFirestore(app);
+const app  = initializeApp(cfg);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+
+// Autenticación anónima — necesaria para que Firestore permita escritura
+var _authReady = signInAnonymously(auth)
+  .then(function(){ console.log('[A2K] Firebase Auth OK (anónimo)'); })
+  .catch(function(e){ console.warn('[A2K] Auth anónima falló:', e.message); });
 
 const MASTER_PIN = 'A2K-ELITE-2026';
 var _lics = [];
@@ -663,6 +670,8 @@ window.generarDemo = async function() {
   btn.textContent = '⏳ Generando...'; btn.disabled = true;
 
   try {
+    // Asegurar autenticación antes de escribir
+    if (!auth.currentUser) await signInAnonymously(auth);
     var codigo = mkDemo();
     var ahora  = new Date().toISOString();
     var venc   = new Date(); venc.setDate(venc.getDate() + dias);
@@ -719,6 +728,8 @@ window.generarPro = async function() {
   btn.textContent = '⏳ Generando...'; btn.disabled = true;
 
   try {
+    // Asegurar autenticación antes de escribir
+    if (!auth.currentUser) await signInAnonymously(auth);
     var codigo          = mkPro();
     var codigoDashboard = mkCli();
     var ahora  = new Date().toISOString();
