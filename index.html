@@ -1198,6 +1198,7 @@ canvas{max-width:100%!important}
 .hw-badge.offline{background:rgba(255,77,109,.08);border-color:rgba(255,77,109,.3);color:var(--text3)}
 .hw-badge.waiting{background:rgba(245,158,11,.1);border-color:var(--warn);color:var(--warn);animation:pulse-hw 1.5s ease-in-out infinite}
 @keyframes pulse-hw{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
 .hw-dot{width:7px;height:7px;border-radius:50%;background:currentColor}
 #payGatewayOverlay{position:fixed;inset:0;background:rgba(8,8,15,.92);z-index:8000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(12px)}
 #payGatewayOverlay.show{display:flex}
@@ -2519,6 +2520,27 @@ canvas{max-width:100%!important}
         <input type="number" id="montoRecibido" class="form-input" step="0.01" placeholder="0.00">
       </div>
       <div id="vueltoInfo" style="display:none;background:var(--bg3);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--neon);margin-top:8px;font-family:var(--mono)"></div>
+
+      <!-- ══ PANEL POS / BIOPAGO — Hook de transacción ══ -->
+      <div id="posPanelCobro" style="display:none;margin-top:10px;background:var(--bg2);border:1px solid var(--accent);border-radius:10px;padding:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div id="posStatusDot" style="width:10px;height:10px;border-radius:50%;background:var(--warn);flex-shrink:0;animation:pulse 1.2s infinite"></div>
+          <span id="posStatusTxt" style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text2)">Esperando confirmación del terminal...</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" id="posTxId" class="form-input" placeholder="ID de transacción (auto o manual)"
+            style="flex:1;font-family:var(--mono);font-size:12px;letter-spacing:1px;text-transform:uppercase"
+            oninput="this.value=this.value.toUpperCase()"
+            onkeydown="if(event.key==='Enter')confirmarVenta()">
+          <button class="btn btn-sm" id="btnPosSerial" onclick="_conectarSerialPOS()"
+            title="Conectar terminal por USB/Serial"
+            style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:6px 10px;font-size:16px;cursor:pointer"
+            >🔌</button>
+        </div>
+        <div id="posSerialStatus" style="font-size:10px;color:var(--text3);margin-top:4px;font-family:var(--mono)">
+          Sin terminal conectado — puedes ingresar el ID manualmente
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost btn-sm" onclick="closeModal('modalCobro')">Cancelar</button>
@@ -3641,6 +3663,9 @@ function selectPayMethod(method) {
 function selectPayMethod(method) {
   STATE.payMethod = method;
   renderPaymentBtns();
+  // Actualizar panel POS si el modal cobro está abierto
+  var mc = document.getElementById('modalCobro');
+  if (mc && mc.style.display !== 'none') setTimeout(_togglePOSPanel, 50);
   // Mostrar botón cobrar con el método seleccionado
   var btnCobrar = document.getElementById('btnCobrar');
   if (btnCobrar && STATE.cart.length > 0) {
@@ -3698,6 +3723,8 @@ function procesarVenta() {
     clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
 
   openModal('modalCobro');
+  // Activar/desactivar panel POS según método de pago seleccionado
+  setTimeout(_togglePOSPanel, 80);
 }
 
 function confirmarVenta() {
@@ -3730,6 +3757,9 @@ function confirmarVenta() {
 
 function _ejecutarVenta(total, clienteId, notas) {
   var esMixto = STATE.payMethod === 'Pago Mixto';
+  // Capturar ID de transacción POS/Biopago si fue ingresado
+  var txIdEl = document.getElementById('posTxId');
+  var txId   = (txIdEl && txIdEl.value.trim()) ? txIdEl.value.trim().toUpperCase() : null;
   var venta = {
     id: Date.now(),
     fecha: new Date().toISOString(),
@@ -3741,6 +3771,8 @@ function _ejecutarVenta(total, clienteId, notas) {
     cliente: clienteId,
     notas: notas,
     tasa: STATE.tasa,
+    txId: txId || undefined,          // ID transacción POS/terminal
+    estado: 'pagada',                 // estado explícito de la venta
   };
 
   // Guardar venta
@@ -3796,11 +3828,153 @@ function _ejecutarVenta(total, clienteId, notas) {
   var elVI = document.getElementById('vueltoInfo');
   if (elVI) elVI.style.display = 'none';
 
-  try { abrirGavetaDinero(); } catch(e) {}
-  setTimeout(function(){ if(window.syncVentasCloud) window.syncVentasCloud(); }, 1000);
+  // ── Flujo hardware completo post-venta ──────────────────────
+  _flujoHardwareCompleto(venta);
+  setTimeout(function(){ if(window.syncVentasCloud) window.syncVentasCloud(); }, 1200);
   showRecibo(venta);
   renderCart();
   renderPosProducts();
+}
+
+// ══════════════════════════════════════════════════════════════
+// 🖨️  FLUJO HARDWARE COMPLETO — Impresora + Gaveta + Toast
+// Orden: 1-Ticket → 2-Gaveta → 3-Toast de éxito
+// ══════════════════════════════════════════════════════════════
+function _flujoHardwareCompleto(venta) {
+  // 1. Imprimir ticket térmico (si hay impresora conectada o ventana emergente)
+  setTimeout(function() {
+    try {
+      if (typeof imprimirReciboTermico === 'function') {
+        imprimirReciboTermico(venta);
+      }
+    } catch(e) { console.warn('[HW] Ticket:', e.message); }
+  }, 150);
+
+  // 2. Abrir gaveta de dinero — ESC/POS \x1b\x70\x00\x19\xfa
+  setTimeout(function() {
+    try {
+      if (typeof abrirGavetaDinero === 'function') abrirGavetaDinero();
+    } catch(e) { console.warn('[HW] Gaveta:', e.message); }
+  }, 400);
+
+  // 3. Toast de confirmación visual
+  setTimeout(function() {
+    var metodo = venta.metodo || '';
+    var txId   = venta.txId   || '';
+    var msg    = '✅ Venta confirmada — $' + venta.totalUSD.toFixed(2);
+    if (txId) msg += ' · TX: ' + txId;
+    showToast(msg, 'success');
+  }, 600);
+}
+
+// ══════════════════════════════════════════════════════════════
+// 💳  HOOK POS / BIOPAGO — Muestra/oculta panel transacción
+// ══════════════════════════════════════════════════════════════
+var _POS_METODOS = ['Punto Crédito','Punto Débito','Bio Pago','Biopago','Zinli','Zelle','Binance Pay','Bybit Pay','Apolo Pay'];
+var _posSerialPort   = null;
+var _posSerialReader = null;
+var _posBuffer       = '';
+
+function _togglePOSPanel() {
+  var panel  = document.getElementById('posPanelCobro');
+  var txInp  = document.getElementById('posTxId');
+  if (!panel) return;
+  var esPOS = _POS_METODOS.some(function(m){ return m === STATE.payMethod; });
+  panel.style.display = esPOS ? 'block' : 'none';
+  if (esPOS && txInp) txInp.value = '';
+  _actualizarPOSStatus(esPOS ? 'waiting' : 'idle');
+}
+
+function _actualizarPOSStatus(estado) {
+  var dot = document.getElementById('posStatusDot');
+  var txt = document.getElementById('posStatusTxt');
+  if (!dot || !txt) return;
+  if (estado === 'waiting') {
+    dot.style.background = 'var(--warn)';
+    dot.style.animation  = 'pulse 1.2s infinite';
+    txt.textContent = 'Esperando confirmación del terminal...';
+  } else if (estado === 'ok') {
+    dot.style.background = 'var(--neon)';
+    dot.style.animation  = 'none';
+    txt.textContent = 'Transacción recibida — listo para confirmar';
+    txt.style.color = 'var(--neon)';
+  } else if (estado === 'connected') {
+    dot.style.background = 'var(--accent)';
+    txt.textContent = 'Terminal conectado por USB/Serial';
+    txt.style.color = 'var(--accent)';
+  } else {
+    dot.style.background = 'var(--border)';
+    dot.style.animation  = 'none';
+    txt.textContent = 'Sin terminal activo';
+  }
+}
+
+// ── WebSerial: conectar terminal POS por USB ──────────────────
+async function _conectarSerialPOS() {
+  var statusEl = document.getElementById('posSerialStatus');
+  var btnEl    = document.getElementById('btnPosSerial');
+  if (!('serial' in navigator)) {
+    if (statusEl) statusEl.textContent = '⚠️ Web Serial no disponible. Usa Chrome 89+ en escritorio.';
+    showToast('Web Serial no disponible — Chrome 89+ requerido','warn');
+    return;
+  }
+  // Si ya hay puerto → desconectar
+  if (_posSerialPort) {
+    try { if (_posSerialReader) { await _posSerialReader.cancel(); _posSerialReader = null; } } catch(e){}
+    try { await _posSerialPort.close(); } catch(e){}
+    _posSerialPort = null;
+    if (statusEl) statusEl.textContent = 'Terminal desconectado.';
+    if (btnEl)    btnEl.textContent = '🔌';
+    _actualizarPOSStatus('idle');
+    return;
+  }
+  try {
+    _posSerialPort = await navigator.serial.requestPort();
+    await _posSerialPort.open({ baudRate: 9600 });
+    if (statusEl) statusEl.textContent = '✅ Terminal conectado — esperando datos...';
+    if (btnEl)    btnEl.textContent = '🔴';
+    _actualizarPOSStatus('connected');
+    _leerSerialPOS(); // inicia lectura en background
+  } catch(e) {
+    _posSerialPort = null;
+    if (statusEl) statusEl.textContent = '❌ No se pudo conectar: ' + e.message;
+  }
+}
+
+// ── Lector continuo de datos Serial (auto-llena campo TX ID) ─
+async function _leerSerialPOS() {
+  if (!_posSerialPort || !_posSerialPort.readable) return;
+  var decoder = new TextDecoderStream();
+  _posSerialPort.readable.pipeTo(decoder.writable).catch(function(){});
+  _posSerialReader = decoder.readable.getReader();
+  var statusEl = document.getElementById('posSerialStatus');
+  try {
+    while (true) {
+      var _res = await _posSerialReader.read();
+      if (_res.done) break;
+      _posBuffer += _res.value;
+      // Detectar línea completa (termina en \n o \r)
+      var lines = _posBuffer.split(/[\r\n]+/);
+      _posBuffer = lines.pop(); // guarda fragmento incompleto
+      lines.forEach(function(line) {
+        line = line.trim();
+        if (!line) return;
+        // Buscar ID de transacción: cualquier string alfanumérico de 6-20 chars
+        var match = line.match(/([A-Z0-9\-]{6,20})/);
+        if (match) {
+          var txId = match[1];
+          var inp  = document.getElementById('posTxId');
+          if (inp) { inp.value = txId; inp.style.borderColor = 'var(--neon)'; }
+          _actualizarPOSStatus('ok');
+          if (statusEl) statusEl.textContent = '📡 TX recibida: ' + txId;
+          showToast('💳 TX recibida: ' + txId, 'success');
+        }
+      });
+    }
+  } catch(e) {
+    if (statusEl) statusEl.textContent = 'Lectura Serial interrumpida.';
+    _posSerialReader = null;
+  }
 }
 
 // ── PAGO MIXTO ────────────────────────────────────────────────
