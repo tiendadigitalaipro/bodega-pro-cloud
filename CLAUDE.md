@@ -89,23 +89,45 @@ window.syncVentasCloud() → Promise<void>
 
 ---
 
-## 🔒 IRON LOCK CLOUD — FLUJO DE VERIFICACIÓN
+## 🔒 IRON LOCK CLOUD — FLUJO DE VERIFICACIÓN (BLINDADO)
 
-El Iron Lock Cloud tiene **2 capas de verificación** (más robusto que la versión local):
+El Iron Lock Cloud tiene **3 capas de verificación**:
 
 ```
-1️⃣ FIREBASE FIRST: cloudGet('licencias', code)
-   ├── activa === false → BLOQUEO ("Licencia inactiva, contacta A2K")
-   ├── esDemo + vencida → BLOQUEO ("Prueba terminada")
-   └── válida → ✅ ACCESO CONCEDIDO (fuente: 'firebase')
+0️⃣ CSS INJECT en <head>: #app{display:none!important} — antes del DOM
 
-2️⃣ FALLBACK LOCAL (si Firebase falla/offline):
-   ├── Verifica en localStorage (device registrado)
-   ├── Verifica códigos MASTER internos
+1️⃣ LOGIN (doLogin): Firebase FIRST → cloudGet('licencias', code)
+   ├── activa === false → BLOQUEO
+   ├── vencida → BLOQUEO
+   └── válida → guarda session + startApp()
+
+2️⃣ AUTO-LOGIN al recargar: RE-VALIDA Firebase antes de startApp()
+   ├── Sin sesión guardada → muestra loginScreen
+   ├── Con sesión → cloudGet('licencias', code) async
+   │   ├── inactiva/vencida → borra session+license, muestra login
+   │   └── válida (o Firebase offline) → startApp()
+   └── Sin cloudGet disponible → startApp() con licencia local
+
+3️⃣ FALLBACK LOCAL (offline):
+   ├── Verifica localStorage (device registrado)
+   ├── Verifica códigos MASTER
    └── Verifica licenses_issued locales
 ```
 
+### confirmarLogout (blindado)
+```javascript
+function confirmarLogout() {
+  closeModal('modalLogout');
+  DB.del('session'); DB.del('license');
+  // Oculta app de inmediato (sin flash)
+  document.getElementById('app').style.setProperty('display','none','important');
+  document.getElementById('loginScreen').style.setProperty('display','flex','important');
+  location.replace(location.href.split('?')[0]); // sin historial — back-button no regresa
+}
+```
+
 **Códigos MASTER internos:** `BPRO-DEMO-2024`, `BPRO-ABIG-2024`, `BPRO-ZYNC-2024`
+**Demo = 5 días fijos:** `vd.setDate(vd.getDate() + 5)` — NO cambiar
 
 ---
 
@@ -143,12 +165,43 @@ z-index: 50     → topbar
 | `#modalDeudaProv` | funciones de proveedores |
 | `#modalPagoProv` | funciones de proveedores |
 
-### closeModal (línea ~3750)
+### Z-Index Stack BLINDADO (actualizado)
+```
+z-index: 99999  → #modalAdminPw
+z-index: 20000  → .btn-close, .modal-footer .btn (SIEMPRE encima de todo)
+z-index: 10001  → .modal-overlay
+z-index: 9000   → #modalUserPicker
+z-index: 8000   → #payGatewayOverlay
+z-index: 200    → .sidebar (mobile)
+z-index: 100    → sidebar desktop
+z-index: 50     → topbar
+```
+
+### CSS Anti-bloqueo (línea ~884)
+```css
+.btn-close { z-index:20000!important; pointer-events:auto!important }
+.modal-footer .btn, .modal-footer button { z-index:20000!important; pointer-events:auto!important }
+```
+
+### closeModal (línea ~3841 y ~5718)
 ```javascript
 function closeModal(id) {
   var el = document.getElementById(id);
-  if (el) { el.style.setProperty('display','none','important'); el.classList.remove('open'); }
+  if (!el) return;
+  el.style.setProperty('display', 'none', 'important');
+  el.classList.remove('open');
 }
+```
+
+### Listener Global Captura (línea ~3847)
+```javascript
+window.addEventListener('click', function(e) {
+  var btn = e.target.closest('.btn-close');
+  if (!btn) return;
+  var overlay = btn.closest('.modal-overlay');
+  if (overlay) { overlay.style.setProperty('display','none','important'); overlay.classList.remove('open'); return; }
+  // fallback: subir parentNode
+}, true); // true = fase de CAPTURA (ignora stopPropagation)
 ```
 
 ---

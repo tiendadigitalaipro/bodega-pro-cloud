@@ -208,6 +208,10 @@ Firestore actualizado ✅
 | Fecha | Cambio | Archivos |
 |---|---|---|
 | 2026-03-20 | Creación de CLAUDE.md y PROJECT_RULES.md | CLAUDE.md, PROJECT_RULES.md |
+| 2026-03-21 | Iron Lock: re-validación Firebase en auto-login | index.html |
+| 2026-03-21 | closeModal con setProperty !important + listener global captura | index.html |
+| 2026-03-21 | confirmarLogout: borra license+session, location.replace sin historial | index.html |
+| 2026-03-21 | Dashboard statsGrid2: clase grid-3 normalizada | index.html |
 
 ---
 
