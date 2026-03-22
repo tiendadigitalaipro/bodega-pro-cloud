@@ -8082,78 +8082,121 @@ window.showPage = function(page, el) {
   var MASTERS = ['BPRO-ABIG-2024', 'BPRO-ZYNC-2024', 'BPRO-DEMO-2024'];
 
   function _abrirApp(negocio, user, code) {
-    // 1. Guardar sesión en TODOS los almacenes posibles
+    // ── 1. Guardar sesión en TODOS los almacenes posibles ──────────
     var sesion = {
       code: code, negocio: negocio, user: user,
       tipo: 'MASTER', esDemo: false, venceEn: null,
       activatedAt: new Date().toISOString(), loginAt: new Date().toISOString()
     };
-    var keys = ['bp_license','bp_session','bpro_license','bpro_session','bodegapro_lic','bodegapro_ses'];
-    keys.forEach(function(k){ try{ localStorage.setItem(k, JSON.stringify(sesion)); }catch(e){} });
-
-    // 2. Eliminar TODOS los <style> dinámicos que bloquean #app
-    var styles = document.querySelectorAll('style');
-    styles.forEach(function(s){
-      if (s.textContent && s.textContent.indexOf('#app') !== -1 && s.textContent.indexOf('none') !== -1) {
-        s.parentNode.removeChild(s);
-      }
+    ['bp_license','bp_session','bpro_license','bpro_session'].forEach(function(k){
+      try{ localStorage.setItem(k, JSON.stringify(sesion)); }catch(e){}
     });
 
-    // 3. Mostrar #app / ocultar #loginScreen con doble fuerza
-    var loginEl = document.getElementById('loginScreen');
-    var appEl   = document.getElementById('app');
-    var spinners = document.querySelectorAll('.loading, .spinner, #loadingOverlay, #splashScreen, [id*="loading"], [id*="spinner"]');
+    // ── 2. INYECTAR override CSS (NUNCA borrar estilos existentes) ─
+    //    Solo agrega un <style> al final del <head> que fuerza
+    //    la visibilidad — sin tocar el CSS principal de 700+ líneas.
+    var overrideStyle = document.createElement('style');
+    overrideStyle.id  = 'a2k-bypass-override';
+    overrideStyle.textContent = [
+      '#loginScreen{display:none!important}',
+      '#app{display:flex!important}',
+      '.loading,.spinner,#loadingOverlay,#splashScreen{display:none!important}'
+    ].join('');
+    document.head.appendChild(overrideStyle);
 
-    if (loginEl) { loginEl.style.cssText += ';display:none!important'; }
-    if (appEl)   { appEl.style.cssText   += ';display:flex!important'; }
-    spinners.forEach(function(s){ s.style.setProperty('display','none','important'); });
-
-    // 4. Intentar startApp() con STATE y DB correctos
+    // ── 3. Intentar startApp() con STATE y DB correctos ────────────
     try {
       if (typeof window.STATE !== 'undefined') {
-        window.STATE.user = { negocio: negocio, user: user, deviceId: 'DEV-MASTER', loginAt: sesion.loginAt };
+        window.STATE.user = { negocio: negocio, user: user,
+          deviceId: 'DEV-MASTER', loginAt: sesion.loginAt };
         window.STATE.tasa = window.STATE.tasa || 649;
       }
       if (typeof window.DB !== 'undefined') {
         window.DB.set('license', sesion);
-        window.DB.set('session', { negocio: negocio, user: user, deviceId: 'DEV-MASTER', loginAt: sesion.loginAt });
+        window.DB.set('session', { negocio: negocio, user: user,
+          deviceId: 'DEV-MASTER', loginAt: sesion.loginAt });
       }
-      if (typeof window.startApp === 'function') { window.startApp(); return; }
+      if (typeof window.startApp === 'function') {
+        window.startApp();
+        _postLogin(negocio, user); // Cloud + BCV después de startApp
+        return;
+      }
     } catch(err) { console.warn('[A2K BYPASS] startApp falló:', err.message); }
 
-    // 5. Si startApp no existe o falló — inicializar UI mínima manualmente
+    // ── 4. UI mínima si startApp no existe o falló ─────────────────
     try {
-      // Topbar: nombre de usuario y fecha
       var now = new Date();
-      var dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
-      var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-      var fechaStr = dias[now.getDay()] + ', ' + now.getDate() + ' de ' + meses[now.getMonth()];
-      ['userName','userName2'].forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=user; });
-      ['userAvatar','userAvatarTop'].forEach(function(id){ var e=document.getElementById(id); if(e) e.textContent=user.charAt(0).toUpperCase(); });
-      var dateEl = document.getElementById('topbarDate'); if(dateEl) dateEl.textContent = fechaStr;
-      var greetEl = document.getElementById('dashGreeting');
+      var dias  = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+      var meses = ['enero','febrero','marzo','abril','mayo','junio','julio',
+                   'agosto','septiembre','octubre','noviembre','diciembre'];
       var h = now.getHours();
-      if(greetEl) greetEl.textContent = (h<12?'Buenos días':h<18?'Buenas tardes':'Buenas noches') + ', ' + user + ' 👋';
-      var negEl = document.getElementById('dashNegocio'); if(negEl) negEl.textContent = negocio + ' · Resumen del día';
-      // Cloud status
-      var csTxt = document.getElementById('cloudStatusTxt'); if(csTxt) csTxt.textContent = 'Cloud Offline';
-      // Llamar renders si existen
-      ['renderDashboard','renderPaymentBtns','renderInventario','renderHistorial'].forEach(function(fn){
-        if(typeof window[fn]==='function') { try{ window[fn](); }catch(e){} }
-      });
-      // Navegar al dashboard
-      if(typeof window.showPage==='function') { try{ window.showPage('dashboard'); }catch(e){} }
-    } catch(uiErr) { console.warn('[A2K BYPASS] UI manual falló:', uiErr.message); }
+      var saludo = h<12?'Buenos días':h<18?'Buenas tardes':'Buenas noches';
+      var fechaStr = dias[now.getDay()]+', '+now.getDate()+' de '+meses[now.getMonth()];
 
-    // 6. Fallback FINAL: si #app sigue invisible, recargar (auto-login leerá localStorage)
+      function _st(id,txt){ var e=document.getElementById(id); if(e) e.textContent=txt; }
+      _st('userName',user); _st('userName2',user);
+      _st('userAvatar',user.charAt(0).toUpperCase());
+      _st('userAvatarTop',user.charAt(0).toUpperCase());
+      _st('topbarDate', fechaStr);
+      _st('dashGreeting', saludo+', '+user+' 👋');
+      _st('dashNegocio', negocio+' · Resumen del día');
+
+      ['renderDashboard','renderPaymentBtns','renderInventario'].forEach(function(fn){
+        if(typeof window[fn]==='function'){ try{window[fn]();}catch(e){} }
+      });
+      if(typeof window.showPage==='function'){ try{window.showPage('dashboard');}catch(e){} }
+    } catch(uiErr){ console.warn('[A2K BYPASS] UI manual:', uiErr.message); }
+
+    _postLogin(negocio, user);
+
+    // ── 5. Fallback FINAL: si #app sigue invisible → recargar ──────
     setTimeout(function(){
       var a = document.getElementById('app');
-      var computed = window.getComputedStyle(a||document.body).display;
-      if (!a || computed === 'none') {
-        console.warn('[A2K BYPASS] App no visible, recargando...');
+      if(!a || window.getComputedStyle(a).display==='none'){
+        console.warn('[A2K BYPASS] Recargando con sesión guardada...');
         location.reload();
       }
-    }, 800);
+    }, 1000);
+  }
+
+  // ── Post-login: Cloud + BCV (carga diferida, no bloquea UI) ──────
+  function _postLogin(negocio, user) {
+    setTimeout(function(){
+      // Cloud status — reconectar Firebase
+      try {
+        if(typeof window.cloudGet === 'function'){
+          var csBadge = document.getElementById('cloudStatus');
+          var csTxt   = document.getElementById('cloudStatusTxt');
+          if(csTxt) csTxt.textContent = '⏳ Conectando...';
+          window.cloudGet('licencias','__ping__')
+            .then(function(){
+              if(csBadge) csBadge.classList.remove('offline');
+              if(csTxt)   csTxt.textContent = 'Cloud Online';
+            })
+            .catch(function(){
+              if(csBadge) csBadge.classList.add('offline');
+              if(csTxt)   csTxt.textContent = 'Cloud Offline';
+            });
+        }
+      } catch(e){}
+
+      // Tasa BCV — leer de config o usar último valor guardado
+      try {
+        var cfg  = {};
+        try{ cfg = JSON.parse(localStorage.getItem('bp_config')||'{}'); }catch(e){}
+        if(!cfg.tasa) try{ cfg = JSON.parse(localStorage.getItem('bpro_config')||'{}'); }catch(e){}
+        var tasa = (cfg && cfg.tasa) ? cfg.tasa
+                 : (window.STATE && window.STATE.tasa) ? window.STATE.tasa : 649;
+        var badge = document.getElementById('tasaBcvVal');
+        if(badge) badge.textContent = 'Bs '+Number(tasa).toLocaleString('es-VE',
+          {minimumFractionDigits:2,maximumFractionDigits:2});
+      } catch(e){}
+
+      // Sync con la nube si disponible
+      if(typeof window.syncVentasCloud==='function'){
+        try{ window.syncVentasCloud(); }catch(e){}
+      }
+    }, 500); // 500ms después → UI ya visible, luego datos
   }
 
   function _masterActivar() {
