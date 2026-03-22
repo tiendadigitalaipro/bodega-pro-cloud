@@ -673,48 +673,62 @@ window.generarDemo = async function() {
   var btn = document.getElementById('btnGenDemo');
   btn.textContent = '⏳ Generando...'; btn.disabled = true;
 
+  // ── PASO 1: Generar código PRIMERO (offline) ──
+  var codigo = mkDemo();
+  var ahora  = new Date().toISOString();
+  var venc   = new Date(); venc.setDate(venc.getDate() + dias);
+  var tel    = telefono.replace(/[^0-9]/g,'');
+  var fv     = fmtFecha(venc.toISOString());
+
+  // ── PASO 2: Mostrar código INMEDIATAMENTE ──
+  document.getElementById('codeDemoVal').textContent = codigo;
+  var msgWA = encodeURIComponent(
+    '🆓 *Prueba DEMO — Bodega Pro*\n' +
+    'Código de Acceso: *' + codigo + '*\n' +
+    'Negocio: ' + negocio + '\n' +
+    'Días de prueba: ' + dias + '\n' +
+    'Vence: ' + fv + '\n\n' +
+    '📲 https://tiendadigitalaipro.github.io/bodega-pro-cloud/\n' +
+    '¡Pruébalo gratis!'
+  );
+  var btnWA = document.getElementById('btnWADemo');
+  if (tel) {
+    btnWA.style.display = '';
+    btnWA.onclick = function(){ window.open('https://wa.me/'+tel+'?text='+msgWA,'_blank'); };
+  } else {
+    btnWA.style.display = 'none';
+  }
+  document.getElementById('resultDemo').style.display = 'block';
+  btn.textContent = '🆓 Generar Código DEMO'; btn.disabled = false;
+
+  // ── PASO 3: Guardar en Firebase (silencioso si falla) ──
   try {
-    // Asegurar autenticación antes de escribir
     if (!auth.currentUser) await signInAnonymously(auth);
-    var codigo = mkDemo();
-    var ahora  = new Date().toISOString();
-    var venc   = new Date(); venc.setDate(venc.getDate() + dias);
-    await setDoc(doc(db, 'licencias', codigo), {
-      codigo, nombreCliente: negocio, negocio, telefono, email: '',
-      plan: dias, tipo: 'DEMO', terminales: 1, notas: '',
-      activa: true,
-      fechaInicio: ahora, fechaVencimiento: venc.toISOString(), creadaEn: ahora
-    });
-
-    document.getElementById('codeDemoVal').textContent = codigo;
-    var tel = telefono.replace(/[^0-9]/g,'');
-    var fv  = fmtFecha(venc.toISOString());
-    var msgWA = encodeURIComponent(
-      '🆓 *Prueba DEMO — Bodega Pro*\n' +
-      'Código de Acceso: *' + codigo + '*\n' +
-      'Negocio: ' + negocio + '\n' +
-      'Días de prueba: ' + dias + '\n' +
-      'Vence: ' + fv + '\n\n' +
-      '📲 https://tiendadigitalaipro.github.io/bodega-pro-cloud/\n' +
-      '¡Pruébalo gratis!'
-    );
-    var btnWA = document.getElementById('btnWADemo');
-    if (tel) {
-      btnWA.style.display = '';
-      btnWA.onclick = function(){ window.open('https://wa.me/'+tel+'?text='+msgWA,'_blank'); };
-    } else {
-      btnWA.style.display = 'none';
-    }
-    document.getElementById('resultDemo').style.display = 'block';
-
+    var _fbT = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('FB_TIMEOUT')); }, 5000); });
+    await Promise.race([
+      setDoc(doc(db, 'licencias', codigo), {
+        codigo, nombreCliente: negocio, negocio, telefono, email: '',
+        plan: dias, tipo: 'DEMO', terminales: 1, notas: '',
+        activa: true,
+        fechaInicio: ahora, fechaVencimiento: venc.toISOString(), creadaEn: ahora
+      }),
+      _fbT
+    ]);
     document.getElementById('d-negocio').value  = '';
     document.getElementById('d-telefono').value = '';
     document.getElementById('d-dias').value     = '3';
-    await cargarLicencias();
+    cargarLicencias().catch(function(){});
   } catch(e) {
-    alert('❌ Error: ' + e.message);
-  } finally {
-    btn.textContent = '🆓 Generar Código DEMO'; btn.disabled = false;
+    var _eD = e.message === 'FB_TIMEOUT' ? 'Sin conexión a Firebase (timeout 5s)' : e.message;
+    console.warn('[A2K] Firebase no guardó DEMO:', _eD);
+    var _wD = document.getElementById('resultDemo').querySelector('.fb-warn');
+    if (!_wD) {
+      _wD = document.createElement('div');
+      _wD.className = 'fb-warn';
+      _wD.style.cssText = 'margin-top:10px;padding:8px 12px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:8px;font-size:12px;color:#D97706';
+      document.getElementById('resultDemo').appendChild(_wD);
+    }
+    _wD.innerHTML = '⚠️ <strong>Solo local.</strong> Firebase no disponible (' + _eD + '). Copia el código ahora.';
   }
 };
 
@@ -731,55 +745,72 @@ window.generarPro = async function() {
   var btn = document.getElementById('btnGenPro');
   btn.textContent = '⏳ Generando...'; btn.disabled = true;
 
+  // ── PASO 1: Generar códigos PRIMERO (offline, sin depender de Firebase) ──
+  var codigo          = mkPro();
+  var codigoDashboard = mkCli();
+  var ahora  = new Date().toISOString();
+  var venc   = new Date(); venc.setDate(venc.getDate() + plan);
+  var tel    = telefono.replace(/[^0-9]/g,'');
+  var fv     = fmtFecha(venc.toISOString());
+
+  // ── PASO 2: Mostrar códigos INMEDIATAMENTE (antes de intentar Firebase) ──
+  document.getElementById('codePROVal').textContent = codigo;
+  document.getElementById('codeCLIVal').textContent = codigoDashboard;
+  var msgWA = encodeURIComponent(
+    '🔑 *Licencia PRO — Bodega Pro*\n' +
+    'Código Sistema: *' + codigo + '*\n' +
+    'Código Dashboard: *' + codigoDashboard + '*\n' +
+    'Negocio: ' + negocio + '\n' +
+    (terminales > 1 ? 'Terminales: ' + terminales + '\n' : '') +
+    'Vence: ' + fv + '\n\n' +
+    '📲 https://tiendadigitalaipro.github.io/bodega-pro-cloud/\n' +
+    '¡Gracias por elegir Bodega Pro!'
+  );
+  var btnWA = document.getElementById('btnWAPro');
+  if (tel) {
+    btnWA.style.display = '';
+    btnWA.onclick = function(){ window.open('https://wa.me/'+tel+'?text='+msgWA,'_blank'); };
+  } else {
+    btnWA.style.display = 'none';
+  }
+  document.getElementById('resultPro').style.display = 'block';
+  btn.textContent = '⚡ Generar Licencia PRO'; btn.disabled = false;
+
+  // ── PASO 3: Intentar guardar en Firebase (silencioso si falla) ──
   try {
-    // Asegurar autenticación antes de escribir
     if (!auth.currentUser) await signInAnonymously(auth);
-    var codigo          = mkPro();
-    var codigoDashboard = mkCli();
-    var ahora  = new Date().toISOString();
-    var venc   = new Date(); venc.setDate(venc.getDate() + plan);
-    await setDoc(doc(db, 'licencias', codigo), {
-      codigo, codigoDashboard,
-      nombreCliente: nombre, negocio, telefono, email,
-      plan, tipo: 'PRO', terminales, notas: '',
-      activa: true,
-      fechaInicio: ahora, fechaVencimiento: venc.toISOString(), creadaEn: ahora
-    });
-
-    document.getElementById('codePROVal').textContent = codigo;
-    document.getElementById('codeCLIVal').textContent = codigoDashboard;
-    var tel = telefono.replace(/[^0-9]/g,'');
-    var fv  = fmtFecha(venc.toISOString());
-    var msgWA = encodeURIComponent(
-      '🔑 *Licencia PRO — Bodega Pro*\n' +
-      'Código Sistema: *' + codigo + '*\n' +
-      'Código Dashboard: *' + codigoDashboard + '*\n' +
-      'Negocio: ' + negocio + '\n' +
-      (terminales > 1 ? 'Terminales: ' + terminales + '\n' : '') +
-      'Vence: ' + fv + '\n\n' +
-      '📲 https://tiendadigitalaipro.github.io/bodega-pro-cloud/\n' +
-      '¡Gracias por elegir Bodega Pro!'
-    );
-    var btnWA = document.getElementById('btnWAPro');
-    if (tel) {
-      btnWA.style.display = '';
-      btnWA.onclick = function(){ window.open('https://wa.me/'+tel+'?text='+msgWA,'_blank'); };
-    } else {
-      btnWA.style.display = 'none';
-    }
-    document.getElementById('resultPro').style.display = 'block';
-
+    var _fbTimeout = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('FB_TIMEOUT')); }, 5000); });
+    await Promise.race([
+      setDoc(doc(db, 'licencias', codigo), {
+        codigo, codigoDashboard,
+        nombreCliente: nombre, negocio, telefono, email,
+        plan, tipo: 'PRO', terminales, notas: '',
+        activa: true,
+        fechaInicio: ahora, fechaVencimiento: venc.toISOString(), creadaEn: ahora
+      }),
+      _fbTimeout
+    ]);
+    // Firebase OK — limpiar formulario y recargar lista
     document.getElementById('p-nombre').value     = '';
     document.getElementById('p-negocio').value    = '';
     document.getElementById('p-telefono').value   = '';
     document.getElementById('p-email').value      = '';
     document.getElementById('p-duracion').value   = '30';
     document.getElementById('p-terminales').value = '1';
-    await cargarLicencias();
+    cargarLicencias().catch(function(){});
   } catch(e) {
-    alert('❌ Error: ' + e.message);
-  } finally {
-    btn.textContent = '⚡ Generar Licencia PRO'; btn.disabled = false;
+    // Firebase falló — los códigos ya están visibles, solo avisar sin bloquear
+    var _eMsg = e.message === 'FB_TIMEOUT' ? 'Sin conexión a Firebase (timeout 5s)' : e.message;
+    console.warn('[A2K] Firebase no guardó la licencia:', _eMsg);
+    // Mostrar aviso no bloqueante debajo del resultado
+    var _warn = document.getElementById('resultPro').querySelector('.fb-warn');
+    if (!_warn) {
+      _warn = document.createElement('div');
+      _warn.className = 'fb-warn';
+      _warn.style.cssText = 'margin-top:10px;padding:8px 12px;background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:8px;font-size:12px;color:#D97706';
+      document.getElementById('resultPro').appendChild(_warn);
+    }
+    _warn.innerHTML = '⚠️ <strong>Guardado local únicamente.</strong> Firebase no disponible (' + _eMsg + '). <br>Copia y guarda los códigos ahora. Cuando Firebase esté activo, genera una nueva licencia.';
   }
 };
 

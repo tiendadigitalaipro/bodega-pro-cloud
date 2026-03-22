@@ -2984,12 +2984,13 @@ async function doLogin() {
     return;
   }
 
-  // ── Verificar licencia en Firebase (sistema central A2K Studio) ────────
+  // ── Verificar licencia en Firebase (máx 3 segundos, si no responde usa local) ──
   var _loginBtn = document.querySelector('#loginScreen button[onclick]');
   if (_loginBtn) { _loginBtn.textContent = '⏳ Verificando...'; _loginBtn.disabled = true; }
   try {
     if (typeof window.cloudGet === 'function') {
-      var fbLic = await window.cloudGet('licencias', code);
+      var _timeout3s = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('FB_TIMEOUT')); }, 3000); });
+      var fbLic = await Promise.race([window.cloudGet('licencias', code), _timeout3s]);
       if (fbLic) {
         if (!fbLic.activa) {
           showLoginAlert('🚫 Licencia inactiva. Contacta a A2K Digital Studio para reactivarla.', 'error');
