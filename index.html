@@ -3056,17 +3056,23 @@ async function doLogin() {
   // ── Verificar licencia en Firebase (máx 3 segundos, si no responde usa local) ──
   var _loginBtn = document.querySelector('#loginScreen button[onclick]');
   if (_loginBtn) { _loginBtn.textContent = '⏳ Verificando...'; _loginBtn.disabled = true; }
+  console.log('[A2K LOGIN] doLogin() iniciado — código:', code, '| negocio:', negocio, '| user:', user);
   try {
     if (typeof window.cloudGet === 'function') {
+      console.log('[A2K LOGIN] Consultando Firebase licencias/' + code + '...');
       var _timeout3s = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('FB_TIMEOUT')); }, 3000); });
       var fbLic = await Promise.race([window.cloudGet('licencias', code), _timeout3s]);
+      console.log('[A2K LOGIN] Respuesta Firebase:', fbLic ? JSON.stringify(fbLic) : 'null (no encontrado)');
       if (fbLic) {
         if (!fbLic.activa) {
+          console.log('[A2K LOGIN] BLOQUEADO — licencia inactiva');
           showLoginAlert('🚫 Licencia inactiva. Contacta a A2K Digital Studio para reactivarla.', 'error');
           return;
         }
-        if (new Date(fbLic.fechaVencimiento) < new Date()) {
-          var _fv = new Date(fbLic.fechaVencimiento).toLocaleDateString('es-VE');
+        var _fechaVence = fbLic.fechaVencimiento || fbLic.venceEn || null;
+        if (_fechaVence && new Date(_fechaVence) < new Date()) {
+          var _fv = new Date(_fechaVence).toLocaleDateString('es-VE');
+          console.log('[A2K LOGIN] BLOQUEADO — licencia vencida el', _fv);
           var _expMsg = fbLic.tipo === 'DEMO'
             ? '⏰ Tu prueba gratuita terminó. Contacta a A2K Digital Studio para adquirir tu licencia completa. 📱 +58 416 4117331'
             : '⏰ Licencia vencida el ' + _fv + '. Renueva con A2K Digital Studio. 📱 +58 416 4117331';
@@ -3074,10 +3080,11 @@ async function doLogin() {
           return;
         }
         // ✅ Licencia Firebase válida — acceso concedido
+        console.log('[A2K LOGIN] Licencia Firebase VÁLIDA — llamando startApp()');
         DB.set('license', {
           code: code, deviceId: DEVICE_ID,
           activatedAt: new Date().toISOString(),
-          esDemo: false, venceEn: fbLic.fechaVencimiento,
+          esDemo: false, venceEn: _fechaVence,
           tipo: 'PRO', negocio: fbLic.negocio || negocio, fuente: 'firebase'
         });
         const _session = { negocio, user, deviceId: DEVICE_ID, loginAt: new Date().toISOString() };
@@ -3087,9 +3094,12 @@ async function doLogin() {
         return;
       }
       // fbLic === null → código no está en Firebase, continuar con validación local
+      console.log('[A2K LOGIN] Código no encontrado en Firebase — continuando con validación local');
+    } else {
+      console.log('[A2K LOGIN] cloudGet no disponible — usando validación local directamente');
     }
   } catch(_fbErr) {
-    console.warn('Firebase license check failed, usando validación local:', _fbErr);
+    console.warn('[A2K LOGIN] Firebase falló (' + _fbErr.message + ') — usando validación local:', _fbErr);
   } finally {
     if (_loginBtn) { _loginBtn.textContent = '🚀 Activar y Entrar'; _loginBtn.disabled = false; }
   }
@@ -3097,8 +3107,12 @@ async function doLogin() {
   // Códigos master siempre válidos
   const MASTER = ['BPRO-DEMO-2024', 'BPRO-ABIG-2024', 'BPRO-ZYNC-2024'];
 
-  // Device ya registrado con licencia
-  const savedLicense = DB.get('license');
+  // Device ya registrado con licencia (lee DB y también bp_license directamente)
+  var _bpRaw = localStorage.getItem('bp_license');
+  var _bpLic = null;
+  try { _bpLic = _bpRaw ? JSON.parse(_bpRaw) : null; } catch(e){}
+  const savedLicense = DB.get('license') || _bpLic;
+  console.log('[A2K LOGIN] savedLicense:', savedLicense ? JSON.stringify(savedLicense) : 'null');
   if (savedLicense && savedLicense.deviceId === DEVICE_ID) {
     if (savedLicense.code === code) {
       // Mismo código — login directo
@@ -3256,10 +3270,13 @@ function startApp() {
     STATE.simboloRef   = PAISES[_cfg.pais].simboloRef || '$';
     window.PAYMENT_METHODS = PAISES[_cfg.pais].metodosDisponibles.slice();
   }
+  // FIX: limpiar el CSS !important del Iron Lock antes de ocultar loginScreen
+  (function(){ var ss=document.querySelectorAll('style'); ss.forEach(function(s){ if(s.textContent.indexOf('#loginScreen{display:flex!important}')!==-1){ s.textContent=''; } }); })();
   var _loginEl = document.getElementById('loginScreen');
   var _appEl   = document.getElementById('app');
-  if (_loginEl) _loginEl.style.display = 'none';
-  if (_appEl)   _appEl.style.display   = 'flex';
+  if (_loginEl) { _loginEl.style.setProperty('display','none','important'); _loginEl.style.visibility='hidden'; _loginEl.style.opacity='0'; _loginEl.style.pointerEvents='none'; }
+  if (_appEl)   { _appEl.style.setProperty('display','flex','important'); }
+  console.log('[A2K LOGIN] startApp() ejecutado — loginScreen oculto, app visible');
 
   // Cargar configuración guardada
   const cfg = DB.get('config') || {};
