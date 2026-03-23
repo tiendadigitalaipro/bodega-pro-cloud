@@ -78,15 +78,14 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
   <div class="login-box">
     <div class="login-icon">🏪</div>
     <div class="login-title">Mi <span>Cuenta</span></div>
-    <div class="login-sub" id="loginSubtitle">Ingresa el nombre del negocio y tu PIN</div>
+    <div class="login-sub" id="loginSubtitle">Ingresa el nombre del negocio y tu código de acceso</div>
     <input type="text" id="negocioInput" class="input" placeholder="Ej: ZYNC Electronics"
       style="text-align:center;margin-bottom:10px">
-    <input type="password" id="pinInput" class="input" maxlength="4" placeholder="Tu PIN (4 dígitos)"
-      oninput="this.value=this.value.replace(/\D/g,'')"
+    <input type="text" id="pinInput" class="input" placeholder="Ej: BP-CLI-Y4SPJY"
       onkeydown="if(event.key==='Enter')accederCliente()"
-      style="text-align:center;font-size:22px;letter-spacing:10px;font-family:var(--mono)">
+      style="text-align:center;font-family:var(--mono)">
     <button class="btn-primary" onclick="accederCliente()">🔓 Acceder</button>
-    <div id="loginErr" class="err">❌ PIN incorrecto o cliente no encontrado</div>
+    <div id="loginErr" class="err">❌ Código incorrecto o cliente no encontrado</div>
   </div>
 </div>
 
@@ -110,7 +109,6 @@ html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const cfg = {
   apiKey:"AIzaSyCfAh2-K5oe1XPVFvB4jbN62nSOTFq22jo",
@@ -120,14 +118,8 @@ const cfg = {
   messagingSenderId:"245806066684",
   appId:"1:245806066684:web:e45935a6bbe96c9a17a079"
 };
-const app  = initializeApp(cfg);
-const db   = getFirestore(app);
-const auth = getAuth(app);
-
-// Auth anónima — necesaria para que Firestore permita lecturas
-const _authReady = signInAnonymously(auth)
-  .then(function(u){ console.log('[A2K Cliente] Auth OK, uid:', u.user.uid); })
-  .catch(function(e){ console.warn('[A2K Cliente] Auth falló:', e.message); });
+const app = initializeApp(cfg);
+const db  = getFirestore(app);
 
 var _clienteData = null;
 var _negocioData = null;
@@ -155,7 +147,7 @@ function generarCandidatos(nombre) {
 
 window.accederCliente = async function() {
   var negocioRaw = document.getElementById('negocioInput').value.trim();
-  var pin = document.getElementById('pinInput').value.trim();
+  var pin = document.getElementById('pinInput').value.trim().toUpperCase();
   var err = document.getElementById('loginErr');
   var btn = document.querySelector('.btn-primary');
   err.style.display = 'none';
@@ -165,48 +157,85 @@ window.accederCliente = async function() {
     err.textContent = '❌ Ingresa el nombre del negocio';
     err.style.display = 'block'; return;
   }
-  if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-    err.textContent = '❌ El PIN debe ser exactamente 4 dígitos';
+  if (!pin || pin.length < 6 || pin.length > 15 || !/^[A-Z0-9\-]+$/.test(pin)) {
+    err.textContent = '❌ Ingresa un código de acceso válido (Ej: BP-CLI-Y4SPJY)';
     err.style.display = 'block'; return;
   }
 
   if (btn) { btn.textContent = '⏳ Verificando...'; btn.disabled = true; }
 
   try {
-    // Garantizar auth activa antes de tocar Firestore
-    if (!auth.currentUser) await signInAnonymously(auth);
-
     var data = null;
     var docIdEncontrado = null;
 
+    console.log('[DEBUG] Buscando negocio:', negocioRaw);
+    console.log('[DEBUG] Buscando código:', pin);
+
     // 1. Intentar con cada variante del nombre como doc ID
     var candidatos = generarCandidatos(negocioRaw);
+    console.log('[DEBUG] Candidatos doc ID:', candidatos);
     for (var i = 0; i < candidatos.length; i++) {
       var snap = await getDoc(doc(db, 'negocios', candidatos[i]));
+      console.log('[DEBUG] Probando doc ID "' + candidatos[i] + '":', snap.exists() ? 'ENCONTRADO' : 'no existe');
       if (snap.exists()) { data = snap.data(); docIdEncontrado = candidatos[i]; break; }
     }
 
-    // 2. Fallback: buscar en colección solo por coincidencia EXACTA del localId normalizado
+    // 2. Fallback: escanear toda la colección con múltiples estrategias
     if (!data) {
+      console.log('[DEBUG] Paso 1 sin resultado. Escaneando colección completa...');
       var colSnap = await getDocs(collection(db, 'negocios'));
-      var terminoExacto = generarCandidatos(negocioRaw)[0]; // variante principal
+      console.log('[DEBUG] Documentos en colección "negocios":', colSnap.size);
+
+      var busquedaNorm = negocioRaw.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .replace(/[^a-z0-9]/g,'').trim();
+
       colSnap.forEach(function(d) {
         if (data) return;
         var docData = d.data();
-        var lid = (docData.localId || d.id || '').toLowerCase().replace(/[^a-z0-9]/g,'');
-        var ter = terminoExacto.replace(/[^a-z0-9]/g,'');
-        // Solo coincidencia exacta tras normalizar
-        if (lid === ter) { data = docData; docIdEncontrado = d.id; }
+        var docId   = d.id;
+
+        // Normalizar doc ID y campo localId para comparación
+        var idNorm  = docId.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+        var lidNorm = (docData.localId || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+        // También comparar con el nombre del negocio si existe
+        var nombreNorm = (docData.nombre || docData.negocio || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+
+        console.log('[DEBUG] Doc:', docId, '| idNorm:', idNorm, '| lidNorm:', lidNorm, '| busquedaNorm:', busquedaNorm);
+
+        if (idNorm === busquedaNorm || lidNorm === busquedaNorm || nombreNorm === busquedaNorm) {
+          data = docData; docIdEncontrado = docId;
+          console.log('[DEBUG] MATCH encontrado por normalización en doc:', docId);
+        }
       });
+
+      if (!data) {
+        console.log('[DEBUG] Sin match exacto. Intentando coincidencia parcial...');
+        colSnap.forEach(function(d) {
+          if (data) return;
+          var docId  = d.id;
+          var idNorm = docId.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+          var lidNorm = (d.data().localId || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+          if (idNorm.includes(busquedaNorm) || busquedaNorm.includes(idNorm) ||
+              lidNorm.includes(busquedaNorm) || busquedaNorm.includes(lidNorm)) {
+            data = d.data(); docIdEncontrado = docId;
+            console.log('[DEBUG] MATCH parcial en doc:', docId);
+          }
+        });
+      }
     }
 
     if (!data) {
+      console.log('[DEBUG] No se encontró ningún documento para:', negocioRaw);
       err.textContent = '❌ Negocio no encontrado. Verifica el nombre en tu factura.';
       err.style.display = 'block'; return;
     }
 
-    // Verificar PIN maestro de administrador (por defecto '0000', o el guardado en Firebase)
-    var adminPin = data.adminPin ? String(data.adminPin).trim() : '0000';
+    console.log('[DEBUG] Negocio encontrado, doc ID:', docIdEncontrado);
+    console.log('[DEBUG] Clientes en el negocio:', (data.clientes || []).length);
+
+    // Verificar código maestro de administrador (por defecto '0000', o el guardado en Firebase)
+    var adminPin = data.adminPin ? String(data.adminPin).trim().toUpperCase() : '0000';
     if (pin === adminPin) {
       _negocioData = data;
       document.getElementById('loginCli').style.display = 'none';
@@ -221,13 +250,13 @@ window.accederCliente = async function() {
       return;
     }
 
-    // Validar PIN — obligatorio, debe coincidir exactamente
+    // Validar código de acceso — obligatorio, debe coincidir exactamente (normalizado a mayúsculas)
     var clientes = data.clientes || [];
     var cliente = clientes.find(function(c){
-      return c.pin && String(c.pin).trim() === pin;
+      return c.pin && String(c.pin).trim().toUpperCase() === pin;
     });
     if (!cliente) {
-      err.textContent = '❌ PIN incorrecto';
+      err.textContent = '❌ Código incorrecto';
       err.style.display = 'block'; return;
     }
     _clienteData = cliente;

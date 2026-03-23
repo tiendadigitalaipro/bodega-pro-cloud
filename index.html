@@ -1247,6 +1247,7 @@ canvas{max-width:100%!important}
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getFirestore, doc, setDoc, getDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCfAh2-K5oe1XPVFvB4jbN62nSOTFq22jo",
@@ -1259,14 +1260,28 @@ canvas{max-width:100%!important}
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
+
+  // Autenticación anónima — requerida por las reglas de Firestore
+  const _authReady = signInAnonymously(auth)
+    .then(u => { console.log('[A2K] Firebase Auth OK — uid:', u.user.uid); })
+    .catch(e => { console.warn('[A2K] Auth anónima falló:', e.code, e.message); });
 
   window.cloudSave = async function(col, id, datos) {
-    try { await setDoc(doc(db, col, id), { ...datos, _ts: serverTimestamp() }); return true; }
+    try {
+      if (!auth.currentUser) await signInAnonymously(auth);
+      await setDoc(doc(db, col, id), { ...datos, _ts: serverTimestamp() });
+      return true;
+    }
     catch(e) { console.error('CloudSave:', e); return false; }
   };
 
   window.cloudGet = async function(col, id) {
-    try { const s = await getDoc(doc(db, col, id)); return s.exists() ? s.data() : null; }
+    try {
+      if (!auth.currentUser) await signInAnonymously(auth);
+      const s = await getDoc(doc(db, col, id));
+      return s.exists() ? s.data() : null;
+    }
     catch(e) { console.error('CloudGet:', e); return null; }
   };
 
@@ -2563,7 +2578,7 @@ canvas{max-width:100%!important}
   </div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="text/javascript">var _adminUnlocked = false;
+<script type="text/javascript">var _adminUnlocked = false;
 
 function selPago(metodo) {
   STATE.payMethod = metodo;
@@ -2947,8 +2962,12 @@ window.onload = function() {
         } catch(_e) {
           // Sin conexión Firebase o timeout — permitir acceso con licencia local
           console.warn('[A2K] Auto-login Firebase falló (' + _e.message + '), usando local.');
+          if (_e.message === 'AL_TIMEOUT') showLoginAlert('Conexión lenta o código inválido. Intenta de nuevo.', 'error');
           STATE.user = session;
           startApp();
+        } finally {
+          var _alBtn = document.querySelector('#loginScreen button[onclick]');
+          if (_alBtn) { _alBtn.textContent = '🚀 Activar y Entrar'; _alBtn.disabled = false; }
         }
       })();
     } else {
@@ -3265,7 +3284,7 @@ function startApp() {
     }
     // Verificar conectividad con Firebase
     if (typeof window.cloudGet === 'function') {
-      window.cloudGet('licencias', '__ping__').then(function(){ setCloud(true); }).catch(function(){ setCloud(false); });
+      window.cloudGet('licencias', 'ping_test').then(function(){ setCloud(true); }).catch(function(){ setCloud(false); });
     } else {
       setCloud(false);
     }
@@ -8342,7 +8361,7 @@ window.showPage = function(page, el) {
           var csBadge = document.getElementById('cloudStatus');
           var csTxt   = document.getElementById('cloudStatusTxt');
           if(csTxt) csTxt.textContent = '⏳ Conectando...';
-          window.cloudGet('licencias','__ping__')
+          window.cloudGet('licencias','ping_test')
             .then(function(){
               if(csBadge) csBadge.classList.remove('offline');
               if(csTxt)   csTxt.textContent = 'Cloud Online';
