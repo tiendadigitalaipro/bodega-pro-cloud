@@ -8469,13 +8469,186 @@ window.showPage = function(page, el) {
 })();
 </script>
 <script>
+/* ============================================================
+   ASISTENTE LÓGICO LOCAL — Sin API, sin internet, sin costo
+   Funciona 100% con el inventario en memoria (DB/localStorage)
+   ============================================================ */
+
+// Normaliza texto: minúsculas, sin tildes, sin caracteres especiales
+function _iaNorm(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,'').trim();
+}
+
+// Puntaje de similitud entre consulta y nombre de producto
+function _iaScore(query, nombre){
+  var q=_iaNorm(query), n=_iaNorm(nombre);
+  if(n===q) return 100;
+  if(n.includes(q)||q.includes(n)) return 80;
+  var words=q.split(/\s+/);
+  var hits=words.filter(function(w){ return w.length>2 && n.includes(w); });
+  if(hits.length>0) return 40 + (hits.length/words.length)*30;
+  return 0;
+}
+
+// Busca productos en el inventario por nombre
+function _iaBuscar(query){
+  var prods=DB.get('productos')||[];
+  var resultados=[];
+  prods.forEach(function(p){
+    var score=_iaScore(query, p.nombre);
+    if(score>0) resultados.push({p:p, score:score});
+  });
+  resultados.sort(function(a,b){return b.score-a.score;});
+  return resultados;
+}
+
+// Detecta la intención de la pregunta
+function _iaIntención(txt){
+  var t=_iaNorm(txt);
+  if(/precio|cuanto cuesta|cuanto vale|cuanto es|a como|a cuanto/.test(t)) return 'precio';
+  if(/stock|cuantos hay|cuantos quedan|hay|tienes|tienen|queda|quedan|disponible/.test(t)) return 'stock';
+  if(/agotado|sin stock|acabado|no hay/.test(t)) return 'agotados';
+  if(/barato|economico|mas barato|menor precio|oferta/.test(t)) return 'baratos';
+  if(/caro|mas caro|mayor precio/.test(t)) return 'caros';
+  if(/categoria|tipo|lista|todos|inventario|que tienen|que hay/.test(t)) return 'lista';
+  if(/venta|vendido|mas vendido|top|popular/.test(t)) return 'ventas';
+  if(/ganancia|margen|utilidad|lucro/.test(t)) return 'ganancia';
+  if(/hola|buenas|buenos|hey|saludo/.test(t)) return 'saludo';
+  if(/gracias|thank/.test(t)) return 'gracias';
+  return 'busqueda';
+}
+
+// Formatea precio mostrando $ con 2 decimales
+function _iaFmtPrecio(n){ return '$'+parseFloat(n||0).toFixed(2); }
+
+// Genera respuesta basada en intención + inventario local
+function _iaResponder(txt){
+  var prods=DB.get('productos')||[];
+  var intencion=_iaIntención(txt);
+
+  // Saludos
+  if(intencion==='saludo'){
+    return '¡Hola! 👋 Soy tu asistente de bodega.\n\nPuedo decirte:\n• Precio de cualquier producto\n• Si hay stock disponible\n• Productos más baratos o caros\n• Resumen del inventario\n\n¿Qué necesitas saber?';
+  }
+  if(intencion==='gracias'){
+    return '¡Con gusto! 😊 Si necesitas algo más, aquí estoy.';
+  }
+
+  // Productos agotados
+  if(intencion==='agotados'){
+    var agotados=prods.filter(function(p){ return p.stock<=0; });
+    if(agotados.length===0) return '✅ ¡Todo el inventario tiene stock disponible!';
+    return '⚠️ Productos agotados ('+agotados.length+'):\n'+
+      agotados.slice(0,8).map(function(p){ return '• '+(p.emoji||'📦')+' '+p.nombre; }).join('\n')+
+      (agotados.length>8?'\n...y '+(agotados.length-8)+' más.':'');
+  }
+
+  // Más baratos
+  if(intencion==='baratos'){
+    var sorted=[].concat(prods).sort(function(a,b){ return a.precio-b.precio; });
+    return '💰 Los 5 productos más económicos:\n'+
+      sorted.slice(0,5).map(function(p,i){
+        return (i+1)+'. '+(p.emoji||'📦')+' '+p.nombre+' → '+_iaFmtPrecio(p.precio);
+      }).join('\n');
+  }
+
+  // Más caros
+  if(intencion==='caros'){
+    var sortedD=[].concat(prods).sort(function(a,b){ return b.precio-a.precio; });
+    return '💎 Los 5 productos más costosos:\n'+
+      sortedD.slice(0,5).map(function(p,i){
+        return (i+1)+'. '+(p.emoji||'📦')+' '+p.nombre+' → '+_iaFmtPrecio(p.precio);
+      }).join('\n');
+  }
+
+  // Lista / inventario general
+  if(intencion==='lista'){
+    var cats={};
+    prods.forEach(function(p){
+      var c=p.categoria||'General';
+      if(!cats[c]) cats[c]=0;
+      cats[c]++;
+    });
+    var resumen=Object.keys(cats).map(function(c){
+      return '• '+c+': '+cats[c]+' productos';
+    }).join('\n');
+    return '📦 Inventario actual ('+prods.length+' productos):\n'+resumen;
+  }
+
+  // Ventas / más vendidos
+  if(intencion==='ventas'){
+    var ventas=DB.get('ventas')||[];
+    var conteo={};
+    ventas.forEach(function(v){
+      (v.items||[]).forEach(function(it){
+        var n=it.nombre||it.productoId;
+        conteo[n]=(conteo[n]||0)+(it.qty||1);
+      });
+    });
+    var ranking=Object.keys(conteo).sort(function(a,b){ return conteo[b]-conteo[a]; }).slice(0,5);
+    if(ranking.length===0) return '📊 Aún no hay suficientes ventas registradas para mostrar un ranking.';
+    return '🏆 Productos más vendidos:\n'+
+      ranking.map(function(n,i){ return (i+1)+'. '+n+' ('+conteo[n]+' uds)'; }).join('\n');
+  }
+
+  // ── BÚSQUEDA DE PRODUCTO ESPECÍFICO ──
+  var resultados=_iaBuscar(txt);
+
+  if(resultados.length===0){
+    // Sin resultados: sugerir categoría o producto aleatorio
+    var sugerido=prods[Math.floor(Math.random()*prods.length)];
+    var resp='🔍 No encontré "'+txt.trim()+'" en el inventario.';
+    if(sugerido) resp+='\n\nTe ofrezco: '+(sugerido.emoji||'📦')+' '+sugerido.nombre+' a '+_iaFmtPrecio(sugerido.precio);
+    resp+='\n\n¿Quieres que busque algo parecido?';
+    return resp;
+  }
+
+  var mejor=resultados[0].p;
+  var stockTxt=mejor.stock>0
+    ? '✅ Hay '+mejor.stock+' '+( mejor.unidad||'und')+' disponibles.'
+    : '⚠️ Agotado (stock: 0). ';
+
+  // Respuesta principal con producto encontrado
+  var respuesta=(mejor.emoji||'📦')+' *'+mejor.nombre+'*\n';
+  respuesta+='💵 Precio: '+_iaFmtPrecio(mejor.precio)+'\n';
+  respuesta+=stockTxt;
+
+  // Si pidió específicamente precio o stock, respuesta más directa
+  if(intencion==='precio'){
+    respuesta='💵 '+mejor.nombre+': '+_iaFmtPrecio(mejor.precio);
+    if(mejor.stock<=0) respuesta+='\n⚠️ (está agotado actualmente)';
+  } else if(intencion==='stock'){
+    respuesta=mejor.stock>0
+      ? '✅ '+mejor.nombre+': quedan '+mejor.stock+' '+(mejor.unidad||'und')+'.'
+      : '❌ '+mejor.nombre+' está agotado.';
+  }
+
+  // Sugerir alternativas si hay más resultados similares
+  if(resultados.length>1 && intencion==='busqueda'){
+    var alternativas=resultados.slice(1,3).map(function(r){
+      return '  • '+(r.p.emoji||'📦')+' '+r.p.nombre+' → '+_iaFmtPrecio(r.p.precio);
+    });
+    if(alternativas.length>0) respuesta+='\n\n📋 También tengo:\n'+alternativas.join('\n');
+  }
+
+  // Alerta si el stock está por debajo del mínimo
+  if(mejor.stock>0 && mejor.stockMin>0 && mejor.stock<=mejor.stockMin){
+    respuesta+='\n⚡ Stock bajo — quedan pocas unidades.';
+  }
+
+  return respuesta;
+}
+
+/* ── UI del asistente ── */
 function toggleIA(){
   const p=document.getElementById('ia-panel');
   p.style.display=p.style.display==='flex'?'none':'flex';
   if(p.style.display==='flex'){
     document.getElementById('ia-input').focus();
     if(document.getElementById('ia-mensajes').children.length===0){
-      agregarMensajeIA('bot','¡Hola! Soy tu asistente de BODEGA PRO 🤖\n\nPuedo ayudarte con:\n• Precios y stock de productos\n• Ventas del día\n• Cálculos rápidos\n• Productos por agotarse\n\n¿En qué te ayudo?');
+      agregarMensajeIA('bot','¡Hola! Soy tu Asistente Lógico Local 🤖\n\nTrabajo SIN internet, directo con tu inventario.\n\nPregúntame:\n• "¿Cuánto cuesta el arroz?"\n• "¿Hay jabón?"\n• "¿Qué está agotado?"\n• "¿Cuál es el más barato?"\n\n¿En qué te ayudo?');
     }
   }
 }
@@ -8483,48 +8656,30 @@ function agregarMensajeIA(tipo,texto){
   const m=document.getElementById('ia-mensajes');
   const d=document.createElement('div');
   d.className=tipo==='user'?'ia-msg-user':'ia-msg-bot';
+  d.style.whiteSpace='pre-line';
   d.textContent=texto;
   m.appendChild(d);
   m.scrollTop=m.scrollHeight;
   return d;
 }
-async function enviarIA(){
+function enviarIA(){
   const input=document.getElementById('ia-input');
   const txt=input.value.trim();
   if(!txt)return;
   input.value='';
   agregarMensajeIA('user',txt);
-  const cargando=agregarMensajeIA('bot','Pensando...');
+  // Simula pequeño delay natural (150ms) sin llamada de red
+  const cargando=agregarMensajeIA('bot','⚙️ Buscando...');
   cargando.classList.add('cargando');
-  try{
-    let contexto='Eres el asistente IA de BODEGA PRO, un sistema POS venezolano. ';
-    contexto+='Ayudas al bodeguero con precios, inventario, ventas y cálculos. ';
-    contexto+='Respondes en español venezolano, de forma corta y directa. ';
+  setTimeout(function(){
     try{
-      const prods=typeof productos!=='undefined'?productos:[];
-      if(prods.length>0){
-        contexto+='Inventario actual: '+JSON.stringify(prods.slice(0,50))+'. ';
-      }
-    }catch(e){}
-    const res=await fetch('https://bodega-ia-proxy.shoppingelectronics3112.workers.dev',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json'
-      },
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:300,
-        system:contexto,
-        messages:[{role:'user',content:txt}]
-      })
-    });
-    const data=await res.json();
-    cargando.textContent=data.content[0].text;
+      var respuesta=_iaResponder(txt);
+      cargando.textContent=respuesta;
+    }catch(err){
+      cargando.textContent='❌ Error interno: '+err.message;
+    }
     cargando.classList.remove('cargando');
-  }catch(e){
-    cargando.textContent='❌ Sin conexión. Intenta de nuevo.';
-    cargando.classList.remove('cargando');
-  }
+  },150);
 }
 </script>
 </body>
