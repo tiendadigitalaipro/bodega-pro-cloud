@@ -8520,8 +8520,14 @@ function _iaIntención(txt){
   return 'busqueda';
 }
 
-// Formatea precio mostrando $ con 2 decimales
-function _iaFmtPrecio(n){ return '$'+parseFloat(n||0).toFixed(2); }
+// Formatea precio mostrando $ y Bs según la tasa configurada
+function _iaFmtPrecio(n){
+  var usd=parseFloat(n||0);
+  var tasa=(typeof STATE!=='undefined'&&STATE.tasa>0)?STATE.tasa:((DB.get('config')||{}).tasa||649);
+  var bs=usd*tasa;
+  var bsFmt=bs>=1000?(bs/1000).toFixed(2)+'k':bs.toFixed(2);
+  return '$'+usd.toFixed(2)+' · Bs '+bsFmt;
+}
 
 // Genera respuesta basada en intención + inventario local
 function _iaResponder(txt){
