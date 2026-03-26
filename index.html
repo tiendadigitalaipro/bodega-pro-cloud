@@ -8520,13 +8520,24 @@ function _iaIntención(txt){
   return 'busqueda';
 }
 
-// Formatea precio mostrando $ y Bs según la tasa configurada
+// Obtiene la tasa BCV configurada de forma robusta
+function _iaTasa(){
+  try{
+    var t=0;
+    if(typeof STATE!=='undefined') t=parseFloat(STATE.tasa)||0;
+    if(t<=0){var cfg=DB.get('config')||{};t=parseFloat(cfg.tasa)||0;}
+    return t>0?t:649;
+  }catch(e){return 649;}
+}
+// Formatea precio: USD en negrita + Bs pequeño debajo
 function _iaFmtPrecio(n){
   var usd=parseFloat(n||0);
-  var tasa=(typeof STATE!=='undefined'&&STATE.tasa>0)?STATE.tasa:((DB.get('config')||{}).tasa||649);
-  var bs=usd*tasa;
-  var bsFmt=bs>=1000?(bs/1000).toFixed(2)+'k':bs.toFixed(2);
-  return '$'+usd.toFixed(2)+' · Bs '+bsFmt;
+  var bs=usd*_iaTasa();
+  var bsFmt=bs>=1000000?(bs/1000000).toFixed(1)+'M'
+           :bs>=1000?(bs/1000).toFixed(1)+'k'
+           :Math.round(bs).toLocaleString('es-VE');
+  return '<b>$'+usd.toFixed(2)+'</b>'
+        +'<small style="display:block;color:#8A8794;font-size:11px;margin-top:1px;margin-left:2px">Bs '+bsFmt+'</small>';
 }
 
 // Genera respuesta basada en intención + inventario local
@@ -8658,12 +8669,12 @@ function toggleIA(){
     }
   }
 }
-function agregarMensajeIA(tipo,texto){
+function _iaEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function agregarMensajeIA(tipo,html){
   const m=document.getElementById('ia-mensajes');
   const d=document.createElement('div');
   d.className=tipo==='user'?'ia-msg-user':'ia-msg-bot';
-  d.style.whiteSpace='pre-line';
-  d.textContent=texto;
+  d.innerHTML=(typeof html==='string')?html.replace(/\n/g,'<br>'):html;
   m.appendChild(d);
   m.scrollTop=m.scrollHeight;
   return d;
@@ -8673,16 +8684,15 @@ function enviarIA(){
   const txt=input.value.trim();
   if(!txt)return;
   input.value='';
-  agregarMensajeIA('user',txt);
+  agregarMensajeIA('user',_iaEsc(txt));
   // Simula pequeño delay natural (150ms) sin llamada de red
   const cargando=agregarMensajeIA('bot','⚙️ Buscando...');
   cargando.classList.add('cargando');
   setTimeout(function(){
     try{
-      var respuesta=_iaResponder(txt);
-      cargando.textContent=respuesta;
+      cargando.innerHTML=_iaResponder(txt).replace(/\n/g,'<br>');
     }catch(err){
-      cargando.textContent='❌ Error interno: '+err.message;
+      cargando.innerHTML='❌ Error interno: '+_iaEsc(err.message);
     }
     cargando.classList.remove('cargando');
   },150);
