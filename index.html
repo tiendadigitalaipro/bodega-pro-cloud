@@ -6449,54 +6449,136 @@ function switchLicTab(tab) {
   }
 }
 
-function generarLicencia() {
+function _generarTerminalIds(negocio, maxT) {
+  var base = negocio.trim().toLowerCase()
+    .replace(/[^a-z0-9\u00e0-\u00fc]+/g,'_')
+    .replace(/^_+|_+$/g,'');
+  if (maxT === 1) return [base];
+  var ids = [];
+  for (var i = 1; i <= maxT; i++) ids.push(base + '_t' + i);
+  return ids;
+}
+
+async function generarLicencia() {
   var negocio = gval('lic-negocio') || gval('ln-negocio') || 'Cliente';
   var maxT    = parseInt(gval('lic-terminales')) || 1;
   if (!negocio || negocio.trim() === '') { showToast('Ingresa el nombre del negocio','warn'); return; }
   var code = generateLicenseCode(negocio.trim());
+  var terminalIds = _generarTerminalIds(negocio, maxT);
+  var vence = new Date(); vence.setFullYear(vence.getFullYear() + 1);
   var lics = getLicenses();
   var lic  = { id: Date.now(), code: code, negocio: negocio.trim(),
-    tipo: 'PRO', maxTerminales: maxT, devices: [],
-    activo: true, creadoEn: new Date().toISOString() };
+    tipo: 'PRO', maxTerminales: maxT, devices: [], terminalIds: terminalIds,
+    activo: true, creadoEn: new Date().toISOString(), venceEn: vence.toISOString() };
   lics.push(lic); saveLicenses(lics);
   _ultimaLicGenerada = lic;
+  // ── Registrar en Firestore ──
+  if (typeof window.cloudSave === 'function') {
+    var fbData = {
+      code: code, negocio: negocio.trim(), tipo: 'PRO',
+      maxTerminales: maxT, terminalIds: terminalIds,
+      activa: true, esDemo: false,
+      fechaVencimiento: vence.toISOString(), creadoEn: new Date().toISOString(),
+      devices: [], terminalesRegistrados: {}
+    };
+    window.cloudSave('licencias', code, fbData)
+      .then(function(ok){ if(ok) console.log('[A2K] Licencia PRO guardada en Firestore:', code); })
+      .catch(function(e){ console.warn('[A2K] Error guardando licencia en Firestore:', e); });
+  }
   // Mostrar resultado
   stext('licCodigoDisplay', code);
   stext('licInfoDisplay', negocio + ' — Max ' + maxT + ' terminal(es)');
-  var res = document.getElementById('licResultado');
-  if (res) res.style.display = 'block';
+  // Mostrar IDs de terminales generados
+  var tidsEl = document.getElementById('licTerminalIdsDisplay');
+  if (!tidsEl) {
+    var res = document.getElementById('licResultado');
+    if (res) {
+      var div = document.createElement('div');
+      div.id = 'licTerminalIdsDisplay';
+      div.style.cssText = 'margin-top:10px;padding:10px;background:rgba(6,214,160,.08);border:1px solid rgba(6,214,160,.25);border-radius:8px;font-size:12px';
+      res.appendChild(div);
+      tidsEl = div;
+    }
+  }
+  if (tidsEl) {
+    tidsEl.innerHTML = '<div style="font-weight:700;color:var(--neon);margin-bottom:6px">🖥️ IDs de Terminales generados:</div>'
+      + terminalIds.map(function(id, i){
+          return '<div style="font-family:monospace;color:var(--text);padding:2px 0">Terminal ' + (i+1) + ': <strong>' + id + '</strong></div>';
+        }).join('');
+  }
+  var res2 = document.getElementById('licResultado');
+  if (res2) res2.style.display = 'block';
   try { renderLicTable(); } catch(e){}
-  showToast('Código PRO generado: ' + code, 'success');
+  showToast('Código PRO generado y guardado en Firestore ✅', 'success');
 }
 
-function generarLicenciaDemo() {
+async function generarLicenciaDemo() {
   var negocio = gval('demo-negocio') || gval('ln-negocio') || 'Cliente';
   var dias    = parseInt(gval('demo-dias')) || 3;
   if (!negocio || negocio.trim() === '') { showToast('Ingresa el nombre del negocio','warn'); return; }
   var code  = generateDemoCode(negocio.trim(), dias);
   var vence = new Date(); vence.setDate(vence.getDate() + dias);
+  var terminalIds = _generarTerminalIds(negocio, 1); // DEMO = 1 terminal
   var lics  = getLicenses();
   var lic   = { id: Date.now(), code: code, negocio: negocio.trim(),
-    tipo: 'DEMO', dias: dias, devices: [], activo: true,
-    creadoEn: new Date().toISOString(), venceEn: vence.toISOString() };
+    tipo: 'DEMO', dias: dias, devices: [], activo: true, terminalIds: terminalIds,
+    maxTerminales: 1, creadoEn: new Date().toISOString(), venceEn: vence.toISOString() };
   lics.push(lic); saveLicenses(lics);
   _ultimaDemoGenerada = lic;
+  // ── Registrar en Firestore ──
+  if (typeof window.cloudSave === 'function') {
+    var fbData = {
+      code: code, negocio: negocio.trim(), tipo: 'DEMO',
+      maxTerminales: 1, terminalIds: terminalIds,
+      activa: true, esDemo: true,
+      fechaVencimiento: vence.toISOString(), creadoEn: new Date().toISOString(),
+      devices: [], terminalesRegistrados: {}
+    };
+    window.cloudSave('licencias', code, fbData)
+      .then(function(ok){ if(ok) console.log('[A2K] Licencia DEMO guardada en Firestore:', code); })
+      .catch(function(e){ console.warn('[A2K] Error guardando DEMO en Firestore:', e); });
+  }
   stext('demoCodigoDisplay', code);
   stext('demoInfoDisplay', negocio + ' — Vence: ' + vence.toLocaleDateString('es-VE'));
-  var res = document.getElementById('demoResultado');
-  if (res) res.style.display = 'block';
+  // Mostrar ID de terminal
+  var tidsEl = document.getElementById('demoTerminalIdDisplay');
+  if (!tidsEl) {
+    var res = document.getElementById('demoResultado');
+    if (res) {
+      var div = document.createElement('div');
+      div.id = 'demoTerminalIdDisplay';
+      div.style.cssText = 'margin-top:10px;padding:10px;background:rgba(6,214,160,.08);border:1px solid rgba(6,214,160,.25);border-radius:8px;font-size:12px';
+      res.appendChild(div);
+      tidsEl = div;
+    }
+  }
+  if (tidsEl) {
+    tidsEl.innerHTML = '<div style="font-weight:700;color:var(--neon);margin-bottom:4px">🖥️ ID del Terminal:</div>'
+      + '<div style="font-family:monospace;color:var(--text)"><strong>' + terminalIds[0] + '</strong></div>';
+  }
+  var res2 = document.getElementById('demoResultado');
+  if (res2) res2.style.display = 'block';
   try { renderLicTable(); } catch(e){}
-  showToast('Código DEMO generado: ' + code, 'success');
+  showToast('Código DEMO generado y guardado en Firestore ✅', 'success');
 }
 
 function compartirUltimaLicencia() {
   var lic = _ultimaLicGenerada;
   if (!lic) { showToast('Genera una licencia primero','warn'); return; }
-  var txt = 'BODEGA PRO 8.0 — Código de Activación\n\n'
-    + 'Negocio: ' + lic.negocio + '\n'
-    + 'Código: ' + lic.code + '\n'
-    + 'Terminales: ' + lic.maxTerminales + '\n\n'
-    + 'Soporte: +58 416 411 7331\nA2K Digital Studio';
+  var ids = lic.terminalIds || _generarTerminalIds(lic.negocio, lic.maxTerminales || 1);
+  var terminalesStr = ids.map(function(id, i){
+    return '  Terminal ' + (i+1) + ': ' + id;
+  }).join('\n');
+  var txt = '🏪 *BODEGA PRO 8.0 — Activación*\n\n'
+    + '📋 Negocio: ' + lic.negocio + '\n'
+    + '🔑 Código de Licencia:\n*' + lic.code + '*\n\n'
+    + '🖥️ ID(s) de Terminal:\n' + terminalesStr + '\n\n'
+    + '📌 *Instrucciones de activación:*\n'
+    + '1. Abre Bodega Pro Cloud\n'
+    + '2. En "Nombre del Local" escribe el ID de tu terminal\n'
+    + '3. Ingresa tu código de licencia\n'
+    + '4. ¡Listo!\n\n'
+    + '📞 Soporte: +58 416 411 7331\n_A2K Digital Studio_';
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 
@@ -6504,13 +6586,19 @@ function compartirUltimaDemo() {
   var lic = _ultimaDemoGenerada;
   if (!lic) { showToast('Genera una demo primero','warn'); return; }
   var vence = new Date(lic.venceEn).toLocaleDateString('es-VE');
-  var txt = 'BODEGA PRO 8.0 — Demo Gratuita\n\n'
-    + 'Negocio: ' + lic.negocio + '\n'
-    + 'Código DEMO: ' + lic.code + '\n'
-    + 'Válido por: ' + lic.dias + ' días\n'
-    + 'Vence: ' + vence + '\n\n'
+  var ids = lic.terminalIds || _generarTerminalIds(lic.negocio, 1);
+  var txt = '🏪 *BODEGA PRO 8.0 — Demo Gratuita*\n\n'
+    + '📋 Negocio: ' + lic.negocio + '\n'
+    + '🔑 Código DEMO:\n*' + lic.code + '*\n\n'
+    + '🖥️ ID del Terminal:\n  ' + ids[0] + '\n\n'
+    + '⏳ Válido por: ' + lic.dias + ' días (vence: ' + vence + ')\n\n'
+    + '📌 *Instrucciones de activación:*\n'
+    + '1. Abre Bodega Pro Cloud\n'
+    + '2. En "Nombre del Local" escribe: *' + ids[0] + '*\n'
+    + '3. Ingresa el código DEMO\n'
+    + '4. ¡Listo!\n\n'
     + 'Al vencer tus datos quedan seguros. Activa PRO para continuar.\n'
-    + 'Soporte: +58 416 411 7331\nA2K Digital Studio';
+    + '📞 Soporte: +58 416 411 7331\n_A2K Digital Studio_';
   window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
 }
 
