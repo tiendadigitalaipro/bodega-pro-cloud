@@ -1279,7 +1279,7 @@ canvas{max-width:100%!important}
 <!-- ═══ FIREBASE SDK ═══ -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getFirestore, doc, setDoc, getDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot, serverTimestamp, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
   import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
   const firebaseConfig = {
@@ -1320,6 +1320,16 @@ canvas{max-width:100%!important}
 
   window.cloudListen = function(col, id, cb) {
     return onSnapshot(doc(db, col, id), s => { if(s.exists()) cb(s.data()); });
+  };
+
+  window.cloudGetAll = async function(col) {
+    try {
+      if (!auth.currentUser) await signInAnonymously(auth);
+      const snap = await getDocs(collection(db, col));
+      var result = [];
+      snap.forEach(function(d){ result.push({ id: d.id, ...d.data() }); });
+      return result;
+    } catch(e) { console.error('CloudGetAll:', e); return []; }
   };
 
   window.syncVentasCloud = async function() {
@@ -8564,23 +8574,24 @@ function confirmarCobroRapido() {
 //  🏪 LOCALES ACTIVOS — Multi-Terminal Cloud
 // ═══════════════════════════════════════════════════════════════
 
+var _localesMasterMode = false;
+var _localesLicCode    = null;
+var _localesIssuedLic  = null;
+
 async function abrirLocalesActivos() {
-  // Crear modal si no existe
   if (!document.getElementById('modalLocalesActivos')) {
     var m = document.createElement('div');
-    m.className = 'modal-overlay';
-    m.id = 'modalLocalesActivos';
-    m.style.display = 'none';
+    m.className = 'modal-overlay'; m.id = 'modalLocalesActivos'; m.style.display = 'none';
     m.innerHTML = `
-      <div class="modal" style="max-width:520px;width:95%">
+      <div class="modal" style="max-width:540px;width:96%">
         <div class="modal-header">
           <span class="modal-title">🏪 Locales Activos</span>
           <button class="btn-close" onclick="closeModal('modalLocalesActivos')">✕</button>
         </div>
-        <div class="modal-body" style="padding:18px">
+        <div class="modal-body" style="padding:16px">
           <div class="locales-header-bar">
-            <div style="font-size:13px;color:var(--text2)">Terminales conectados a tu licencia</div>
-            <span class="locales-slot-badge" id="localesSlotInfo">— / — terminales</span>
+            <div style="font-size:12px;color:var(--text2)">Negocios/terminales en la nube</div>
+            <span class="locales-slot-badge" id="localesSlotInfo">Cargando...</span>
           </div>
           <div id="localesGridContainer">
             <div style="text-align:center;padding:30px;color:var(--text2)">
@@ -8588,12 +8599,20 @@ async function abrirLocalesActivos() {
               <div style="font-size:13px">Consultando Firestore...</div>
             </div>
           </div>
-          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-sm" onclick="recargarLocalesActivos()" style="flex:1">🔄 Actualizar</button>
-            <button class="btn btn-primary btn-sm" onclick="if(window.syncVentasCloud)syncVentasCloud();recargarLocalesActivos()" style="flex:1">☁️ Sync y Actualizar</button>
+          <div id="localesFormAgregar" style="display:none;margin-top:12px;padding:14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px">
+            <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--neon)">➕ Conectar Nuevo Local</div>
+            <input id="nuevoLocalNombre" class="form-input" placeholder="Ej: Bodega Norte, Sucursal Centro..." style="margin-bottom:8px;width:100%">
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-ghost btn-sm" onclick="document.getElementById('localesFormAgregar').style.display='none'" style="flex:1">Cancelar</button>
+              <button class="btn btn-primary btn-sm" onclick="confirmarNuevoLocal()" style="flex:1">✅ Generar y Conectar</button>
+            </div>
           </div>
-          <div style="margin-top:10px;font-size:11px;color:var(--text3);text-align:center">
-            Un terminal = una computadora/dispositivo activado con tu licencia
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="recargarLocalesActivos()" style="flex:1">🔄 Actualizar</button>
+            <button class="btn btn-outline btn-sm" id="btnAgregarLocal" onclick="mostrarFormNuevoLocal()" style="flex:1;border-color:var(--neon);color:var(--neon)">➕ Conectar Local</button>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:var(--text3);text-align:center">
+            Cada local = un dispositivo/computadora activado en la nube
           </div>
         </div>
       </div>`;
@@ -8608,120 +8627,254 @@ async function _cargarDatosLocales() {
   var slotInfo  = document.getElementById('localesSlotInfo');
   if (!container) return;
 
-  // Obtener licencia actual
+  _setLoadingLocales(container);
+
+  if (typeof window.cloudGet !== 'function' || typeof window.cloudGetAll !== 'function') {
+    container.innerHTML = _localesError('Firebase no disponible. Verifica tu conexión.');
+    return;
+  }
+
   var lic = (window.DB ? DB.get('license') : null) || {};
-  var licCode = lic.code || null;
-
-  // Si es licencia MASTER mostrar mensaje especial
+  _localesLicCode = lic.code || null;
   var masterCodes = ['BPRO-DEMO-2024','BPRO-ABIG-2024','BPRO-ZYNC-2024'];
-  if (!licCode || masterCodes.includes(licCode)) {
-    container.innerHTML = `
-      <div style="text-align:center;padding:24px;color:var(--text2)">
-        <div style="font-size:32px;margin-bottom:8px">👑</div>
-        <div style="font-weight:700;color:var(--text);margin-bottom:6px">Licencia MASTER</div>
-        <div style="font-size:12px">Las licencias MASTER tienen acceso ilimitado.<br>No aplica conteo de terminales.</div>
-      </div>`;
-    if (slotInfo) slotInfo.textContent = 'MASTER — ilimitado';
-    return;
-  }
+  _localesMasterMode = !_localesLicCode || masterCodes.includes(_localesLicCode);
 
-  // Verificar si hay Firebase disponible
-  if (typeof window.cloudGet !== 'function') {
-    container.innerHTML = `
-      <div style="text-align:center;padding:24px;color:var(--warn)">
-        <div style="font-size:28px;margin-bottom:8px">⚠️</div>
-        <div style="font-size:13px">Firebase no disponible. Verifica tu conexión.</div>
-      </div>`;
-    return;
-  }
-
-  // Consultar Firestore
   try {
-    var reg = await window.cloudGet('locales', licCode);
-    var issuedLics = window.DB ? (DB.get('licenses_issued') || []) : [];
-    var issuedLic  = issuedLics.find(function(l){ return l.code === licCode; });
-    var maxT = reg ? (reg.maxTerminales || 2) : (issuedLic ? (issuedLic.maxTerminales || 2) : 2);
-    var terminales = (reg && reg.terminales) ? reg.terminales : {};
-    var keys = Object.keys(terminales);
-    var activosCount = keys.length;
+    var terminales = []; // [{id, nombre, ultimaSync, ventasHoy, totalHoyUSD, ...}]
+    var maxT = 999;
 
-    if (slotInfo) slotInfo.textContent = activosCount + ' / ' + maxT + ' terminal' + (maxT !== 1 ? 'es' : '');
+    if (_localesMasterMode) {
+      // MASTER: leer todos los documentos de negocios/
+      if (slotInfo) slotInfo.textContent = 'MASTER — ilimitado';
+      var docs = await window.cloudGetAll('negocios');
+      terminales = docs.map(function(d){
+        return {
+          id: d.id, nombre: d.localId || d.id,
+          ultimaSync: d.ultimaSync || null,
+          ventasHoy: (d.ventas||[]).filter(function(v){
+            return v.fecha && v.fecha.startsWith(new Date().toISOString().slice(0,10));
+          }).length,
+          totalHoyUSD: (d.ventas||[]).filter(function(v){
+            return v.fecha && v.fecha.startsWith(new Date().toISOString().slice(0,10));
+          }).reduce(function(s,v){ return s+(parseFloat(v.totalUSD||v.total||0)); },0),
+          clientePin: d.adminPin || null
+        };
+      });
+    } else {
+      // Licencia regular: leer locales/{code}
+      var issuedLics = window.DB ? (DB.get('licenses_issued')||[]) : [];
+      _localesIssuedLic = issuedLics.find(function(l){ return l.code === _localesLicCode; });
+      maxT = _localesIssuedLic ? (_localesIssuedLic.maxTerminales||2) : 2;
+      var reg = await window.cloudGet('locales', _localesLicCode);
+      var map = (reg && reg.terminales) ? reg.terminales : {};
+      terminales = Object.keys(map).map(function(k){ return Object.assign({id:k}, map[k]); });
+      var usados = terminales.length;
+      if (slotInfo) slotInfo.textContent = usados + ' / ' + maxT + ' terminal' + (maxT!==1?'es':'');
+      // Ocultar botón agregar si ya se llegó al límite
+      var btnAgregar = document.getElementById('btnAgregarLocal');
+      if (btnAgregar) btnAgregar.style.display = usados >= maxT ? 'none' : '';
+    }
 
     // Actualizar badge sidebar
     var badge = document.getElementById('localesCountBadge');
-    if (badge) { badge.textContent = activosCount; badge.style.display = activosCount > 0 ? 'inline' : 'none'; }
+    if (badge){ badge.textContent=terminales.length; badge.style.display=terminales.length>0?'inline':'none'; }
 
-    if (keys.length === 0) {
+    if (terminales.length === 0) {
       container.innerHTML = `
-        <div style="text-align:center;padding:28px;color:var(--text2)">
+        <div style="text-align:center;padding:24px;color:var(--text2)">
           <div style="font-size:32px;margin-bottom:8px">🏪</div>
-          <div style="font-size:13px;margin-bottom:6px">Aún no hay terminales registrados.</div>
-          <div style="font-size:11px;color:var(--text3)">Presiona "Sync y Actualizar" para registrar este terminal.</div>
+          <div style="font-weight:600;margin-bottom:6px">No hay locales conectados aún</div>
+          <div style="font-size:12px;color:var(--text3)">Presiona <strong style="color:var(--neon)">➕ Conectar Local</strong> para agregar el primer negocio</div>
         </div>`;
       return;
     }
 
     var ahora = new Date();
     var html = '<div class="locales-grid">';
-    keys.forEach(function(key) {
-      var t = terminales[key];
+    terminales.forEach(function(t) {
       var ultimaSync = t.ultimaSync ? new Date(t.ultimaSync) : null;
-      var minutos = ultimaSync ? Math.round((ahora - ultimaSync) / 60000) : null;
-      var esOnline = minutos !== null && minutos < 15;
-      var syncLabel = minutos === null ? 'Sin registro'
-        : minutos < 1   ? 'Hace menos de 1 min'
-        : minutos < 60  ? 'Hace ' + minutos + ' min'
-        : minutos < 1440 ? 'Hace ' + Math.floor(minutos/60) + 'h'
-        : 'Hace ' + Math.floor(minutos/1440) + 'd';
-      var estadoClass = esOnline ? 'online' : 'offline';
-      html += `
-        <div class="local-card ${estadoClass}">
-          <div class="local-card-icon">${esOnline ? '🟢' : '⚫'}</div>
-          <div class="local-card-info">
-            <div class="local-card-name">
-              <span class="local-dot ${estadoClass}"></span>${t.nombre || key}
-            </div>
-            <div class="local-card-sub">ID: ${key} · Device: ${(t.deviceId||'—').slice(-6)}</div>
-          </div>
-          <div class="local-card-right">
-            <div class="local-ventas">$${(t.totalHoyUSD||0).toFixed(2)}</div>
-            <div class="local-sync">${t.ventasHoy||0} ventas · ${syncLabel}</div>
-          </div>
-        </div>`;
+      var min = ultimaSync ? Math.round((ahora-ultimaSync)/60000) : null;
+      var online = min!==null && min<15;
+      var syncLbl = min===null?'Sin sync':min<1?'Ahora':min<60?'Hace '+min+'min':min<1440?'Hace '+Math.floor(min/60)+'h':'Hace '+Math.floor(min/1440)+'d';
+      var pinHtml = t.clientePin ? '<div style="font-size:10px;color:var(--text3);margin-top:1px">🔑 '+t.clientePin+'</div>' : '';
+      html += `<div class="local-card ${online?'online':'offline'}">
+        <div class="local-card-icon">${online?'🟢':'⚫'}</div>
+        <div class="local-card-info">
+          <div class="local-card-name"><span class="local-dot ${online?'online':'offline'}"></span>${t.nombre||t.id}</div>
+          <div class="local-card-sub" style="font-size:10px">ID: <span style="font-family:monospace">${t.id}</span></div>
+          ${pinHtml}
+        </div>
+        <div class="local-card-right">
+          <div class="local-ventas">$${(t.totalHoyUSD||0).toFixed(2)}</div>
+          <div class="local-sync">${t.ventasHoy||0} ventas</div>
+          <div class="local-sync">${syncLbl}</div>
+          <button onclick="verCredencialesLocal('${t.id}')" style="margin-top:4px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:6px;color:var(--accent2);font-size:10px;padding:2px 7px;cursor:pointer">🔑 Credenciales</button>
+        </div>
+      </div>`;
     });
     html += '</div>';
 
-    // Mostrar slots disponibles si hay cupos libres
-    var libres = maxT - keys.length;
-    if (libres > 0) {
-      html += `<div style="margin-top:10px;border:1.5px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;color:var(--text2);font-size:12px">
-        ➕ ${libres} slot${libres>1?'s':''} disponible${libres>1?'s':''} — activa otro dispositivo con el mismo código de licencia
-      </div>`;
+    // Slots libres para licencia regular
+    if (!_localesMasterMode) {
+      var libres = maxT - terminales.length;
+      if (libres > 0) {
+        html += `<div style="margin-top:10px;border:1.5px dashed var(--border2);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;color:var(--text2)">➕ ${libres} slot${libres>1?'s':''} disponible${libres>1?'s':''}</span>
+          <button onclick="mostrarFormNuevoLocal()" style="background:rgba(6,214,160,.12);border:1px solid rgba(6,214,160,.3);border-radius:6px;color:var(--neon);font-size:11px;padding:4px 10px;cursor:pointer;font-weight:700">Conectar</button>
+        </div>`;
+      }
     }
-    container.innerHTML = html;
 
+    container.innerHTML = html;
   } catch(e) {
     console.error('[Locales]', e);
-    container.innerHTML = `
-      <div style="text-align:center;padding:24px;color:var(--danger)">
-        <div style="font-size:28px;margin-bottom:8px">❌</div>
-        <div style="font-size:13px">Error al consultar Firestore.<br><small>${e.message||''}</small></div>
-      </div>`;
+    container.innerHTML = _localesError('Error al consultar Firestore: ' + (e.message||''));
   }
 }
 
-async function recargarLocalesActivos() {
-  var container = document.getElementById('localesGridContainer');
+function _setLoadingLocales(container) {
   if (container) container.innerHTML = `
     <div style="text-align:center;padding:30px;color:var(--text2)">
       <div style="font-size:28px;margin-bottom:8px">☁️</div>
       <div style="font-size:13px">Consultando Firestore...</div>
     </div>`;
+}
+
+function _localesError(msg) {
+  return `<div style="text-align:center;padding:24px;color:var(--warn)">
+    <div style="font-size:28px;margin-bottom:8px">⚠️</div>
+    <div style="font-size:13px">${msg}</div>
+  </div>`;
+}
+
+function mostrarFormNuevoLocal() {
+  var form = document.getElementById('localesFormAgregar');
+  if (form) { form.style.display='block'; document.getElementById('nuevoLocalNombre').focus(); }
+}
+
+async function confirmarNuevoLocal() {
+  var nombreInput = document.getElementById('nuevoLocalNombre');
+  var nombre = nombreInput ? nombreInput.value.trim() : '';
+  if (!nombre) { if(typeof showToast==='function') showToast('Escribe el nombre del local','warn'); return; }
+
+  var terminalId = nombre.toLowerCase().replace(/[^a-z0-9\u00e0-\u00fc]+/g,'_').replace(/^_+|_+$/g,'');
+  var licCode    = _localesLicCode || 'master';
+  var clientePin = typeof _generarClientePin==='function' ? _generarClientePin(nombre) : 'BP-CLI-000000';
+
+  // Guardar en Firestore negocios/{terminalId} con datos iniciales
+  if (typeof window.cloudSave === 'function') {
+    await window.cloudSave('negocios', terminalId, {
+      localId: terminalId, adminPin: clientePin,
+      ventas:[], productos:[], clientes:[], caja:{},
+      ultimaSync: new Date().toISOString()
+    });
+    // Registrar en locales/{licCode} si no es master
+    if (!_localesMasterMode) {
+      var reg = await window.cloudGet('locales', licCode) || { terminales:{} };
+      reg.terminales = reg.terminales || {};
+      reg.terminales[terminalId] = {
+        nombre: nombre, ultimaSync: new Date().toISOString(),
+        ventasHoy: 0, totalHoyUSD: 0, clientePin: clientePin
+      };
+      await window.cloudSave('locales', licCode, reg);
+      // Actualizar licenses_issued con el nuevo terminal
+      if (window.DB && _localesIssuedLic) {
+        _localesIssuedLic.terminalIds = (_localesIssuedLic.terminalIds||[]).concat([terminalId]);
+        DB.set('licenses_issued', DB.get('licenses_issued')||[]);
+      }
+    }
+  }
+
+  // Ocultar formulario y recargar
+  var form = document.getElementById('localesFormAgregar');
+  if (form) { form.style.display='none'; if(nombreInput) nombreInput.value=''; }
+
+  // Mostrar credenciales
+  _mostrarCredencialesModal(terminalId, nombre, licCode, clientePin);
   await _cargarDatosLocales();
 }
 
-window.abrirLocalesActivos  = abrirLocalesActivos;
-window.recargarLocalesActivos = recargarLocalesActivos;
+function verCredencialesLocal(terminalId) {
+  // Buscar los datos del terminal
+  var clientePin = null;
+  var nombre = terminalId;
+  if (_localesMasterMode) {
+    // Los datos vienen del DOM — buscar en las cards renderizadas
+    var card = document.querySelector('[data-tid="'+terminalId+'"]');
+    if (card) clientePin = card.dataset.pin;
+  } else {
+    var issuedLics = window.DB ? (DB.get('licenses_issued')||[]) : [];
+    var lic = issuedLics.find(function(l){ return (l.terminalIds||[]).includes(terminalId); });
+    if (lic) clientePin = lic.clientePin;
+  }
+  _mostrarCredencialesModal(terminalId, nombre, _localesLicCode||'master', clientePin);
+}
+
+function _mostrarCredencialesModal(terminalId, nombre, licCode, clientePin) {
+  var m = document.getElementById('modalCredencialesLocal');
+  if (!m) {
+    m = document.createElement('div');
+    m.className='modal-overlay'; m.id='modalCredencialesLocal'; m.style.display='none';
+    document.body.appendChild(m);
+  }
+  var licLine = (licCode && licCode!=='master')
+    ? `<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text2);margin-bottom:3px">🔐 Código de Licencia</div><div style="font-family:monospace;font-size:15px;font-weight:700;color:var(--neon);letter-spacing:1px">${licCode}</div></div>`
+    : '';
+  var pinLine = clientePin
+    ? `<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text2);margin-bottom:3px">🔑 Clave Portal Cliente</div><div style="font-family:monospace;font-size:15px;font-weight:700;color:var(--warn);letter-spacing:1px">${clientePin}</div></div>`
+    : '';
+  m.innerHTML = `<div class="modal" style="max-width:400px;width:94%">
+    <div class="modal-header">
+      <span class="modal-title">🔑 Credenciales — ${nombre||terminalId}</span>
+      <button class="btn-close" onclick="closeModal('modalCredencialesLocal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:18px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px">
+        <div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text2);margin-bottom:3px">🖥️ ID del Terminal / Nombre del Local</div>
+          <div style="font-family:monospace;font-size:15px;font-weight:700;color:var(--text);letter-spacing:1px">${terminalId}</div></div>
+        ${licLine}
+        ${pinLine}
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6">
+        <strong>Instrucciones para el cliente:</strong><br>
+        1. Abre Bodega Pro Cloud<br>
+        2. En <em>"Nombre del Local"</em> escribe el ID del terminal<br>
+        3. Ingresa el código de licencia<br>
+        4. Para el portal cliente usa la clave de acceso en <em>cliente.html</em>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="_compartirCredencialesWA('${terminalId}','${licCode||''}','${clientePin||''}')">
+        📲 Enviar por WhatsApp
+      </button>
+    </div>
+  </div>`;
+  openModal('modalCredencialesLocal');
+}
+
+function _compartirCredencialesWA(terminalId, licCode, clientePin) {
+  var txt = '🏪 *Bodega Pro Cloud — Credenciales de Acceso*\n\n'
+    + '🖥️ ID del Terminal:\n  *' + terminalId + '*\n';
+  if (licCode && licCode !== 'master') txt += '\n🔐 Código de Licencia:\n  *' + licCode + '*\n';
+  if (clientePin) txt += '\n🔑 Clave Portal Cliente:\n  *' + clientePin + '*\n';
+  txt += '\n📌 *Instrucciones:*\n'
+    + '1. Abre Bodega Pro Cloud\n'
+    + '2. En "Nombre del Local" escribe el ID del terminal\n'
+    + '3. Ingresa el código de licencia\n'
+    + '4. Portal cliente → cliente.html con tu clave\n\n'
+    + '📞 Soporte: +58 416 411 7331\n_A2K Digital Studio_';
+  window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+}
+
+async function recargarLocalesActivos() {
+  _setLoadingLocales(document.getElementById('localesGridContainer'));
+  await _cargarDatosLocales();
+}
+
+window.abrirLocalesActivos      = abrirLocalesActivos;
+window.recargarLocalesActivos   = recargarLocalesActivos;
+window.mostrarFormNuevoLocal    = mostrarFormNuevoLocal;
+window.confirmarNuevoLocal      = confirmarNuevoLocal;
+window.verCredencialesLocal     = verCredencialesLocal;
+window._compartirCredencialesWA = _compartirCredencialesWA;
 // ─── FIN LOCALES ACTIVOS ─────────────────────────────────────────
 </script>
 
