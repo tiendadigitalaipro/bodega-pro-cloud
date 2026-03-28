@@ -1253,6 +1253,27 @@ canvas{max-width:100%!important}
 #ia-input-area{padding:10px;border-top:1px solid rgba(201,168,76,0.2);display:flex;gap:8px}
 #ia-input{flex:1;background:#1C1C22;border:1px solid rgba(201,168,76,0.2);border-radius:8px;color:#F0EDE6;padding:8px 12px;font-size:13px;outline:none}
 #ia-input-area button{background:#C9A84C;color:#0D0D0F;border:none;border-radius:8px;padding:8px 12px;cursor:pointer;font-size:16px}
+
+/* ═══ LOCALES ACTIVOS MODAL ═══ */
+.locales-grid{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;padding-right:4px}
+.local-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:14px;transition:border-color .2s}
+.local-card.online{border-color:rgba(16,185,129,.35)}
+.local-card.offline{border-color:rgba(239,68,68,.2);opacity:.8}
+.local-card-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.local-card.online .local-card-icon{background:rgba(16,185,129,.12)}
+.local-card.offline .local-card-icon{background:rgba(239,68,68,.08)}
+.local-card-info{flex:1;min-width:0}
+.local-card-name{font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.local-card-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.local-card-right{text-align:right;flex-shrink:0}
+.local-ventas{font-size:13px;font-weight:700;color:var(--neon)}
+.local-sync{font-size:10px;color:var(--text3);margin-top:3px}
+.local-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.local-dot.online{background:#10b981;box-shadow:0 0 6px rgba(16,185,129,.6)}
+.local-dot.offline{background:#ef4444}
+.locales-header-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.locales-slot-badge{background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:var(--accent2)}
+#navLocales .locales-count-badge{background:var(--neon);color:#000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;vertical-align:middle}
 </style>
 
 <!-- ═══ FIREBASE SDK ═══ -->
@@ -1319,6 +1340,34 @@ canvas{max-width:100%!important}
     if (ok) {
       console.log('✅ Sync OK —', negocio);
       _mostrarCloudBadge('✅ Nube sincronizada');
+      // ── Registrar este terminal en el registro de locales ──
+      try {
+        var lic = DB.get('license') || {};
+        var licCode = lic.code || 'sin_licencia';
+        var hoy = new Date().toISOString().slice(0,10);
+        var ventasHoy = ventas.filter(function(v){ return v.fecha && v.fecha.startsWith(hoy); });
+        var totalHoy = ventasHoy.reduce(function(s,v){ return s + (parseFloat(v.totalUSD||v.total||0)); }, 0);
+        var issuedLics = DB.get('licenses_issued') || [];
+        var issuedLic = issuedLics.find(function(l){ return l.code === licCode; });
+        var maxT = issuedLic ? (issuedLic.maxTerminales || 2) : 1;
+        var reg = await window.cloudGet('locales', licCode) || { terminales: {}, maxTerminales: maxT };
+        reg.terminales = reg.terminales || {};
+        reg.terminales[negocio] = {
+          nombre: cfg.negocio || negocio,
+          deviceId: (typeof DEVICE_ID !== 'undefined' ? DEVICE_ID : 'desconocido'),
+          ultimaSync: new Date().toISOString(),
+          ventasHoy: ventasHoy.length,
+          totalHoyUSD: Math.round(totalHoy * 100) / 100,
+          estado: 'activo'
+        };
+        reg.maxTerminales = maxT;
+        reg.licenseCode = licCode;
+        await window.cloudSave('locales', licCode, reg);
+        // Actualizar badge del sidebar
+        var activos = Object.keys(reg.terminales).length;
+        var badge = document.getElementById('localesCountBadge');
+        if (badge) { badge.textContent = activos; badge.style.display = activos > 0 ? 'inline' : 'none'; }
+      } catch(e) { console.warn('[Locales] Error registrando terminal:', e); }
     } else {
       _mostrarCloudBadge('❌ Error al sincronizar');
     }
@@ -1466,6 +1515,9 @@ canvas{max-width:100%!important}
       </div>
       <div class="nav-item" id="navUsuarios" onclick="showPage(&#39;usuarios&#39;,this)" data-page="usuarios">
         <span class="nav-icon">👤</span><span class="nav-label">Usuarios</span>
+      </div>
+      <div class="nav-item" id="navLocales" onclick="abrirLocalesActivos()">
+        <span class="nav-icon">🏪</span><span class="nav-label">Locales<span id="localesCountBadge" class="locales-count-badge" style="display:none">0</span></span>
       </div>
     </nav>
     <div class="sidebar-footer">
@@ -8384,6 +8436,170 @@ function confirmarCobroRapido() {
   else alert('✅ ' + nombre + ' agregado al carrito');
 }
 // ─── FIN COBRO RÁPIDO ───────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════
+//  🏪 LOCALES ACTIVOS — Multi-Terminal Cloud
+// ═══════════════════════════════════════════════════════════════
+
+async function abrirLocalesActivos() {
+  // Crear modal si no existe
+  if (!document.getElementById('modalLocalesActivos')) {
+    var m = document.createElement('div');
+    m.className = 'modal-overlay';
+    m.id = 'modalLocalesActivos';
+    m.style.display = 'none';
+    m.innerHTML = `
+      <div class="modal" style="max-width:520px;width:95%">
+        <div class="modal-header">
+          <span class="modal-title">🏪 Locales Activos</span>
+          <button class="btn-close" onclick="closeModal('modalLocalesActivos')">✕</button>
+        </div>
+        <div class="modal-body" style="padding:18px">
+          <div class="locales-header-bar">
+            <div style="font-size:13px;color:var(--text2)">Terminales conectados a tu licencia</div>
+            <span class="locales-slot-badge" id="localesSlotInfo">— / — terminales</span>
+          </div>
+          <div id="localesGridContainer">
+            <div style="text-align:center;padding:30px;color:var(--text2)">
+              <div style="font-size:28px;margin-bottom:8px">☁️</div>
+              <div style="font-size:13px">Consultando Firestore...</div>
+            </div>
+          </div>
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="recargarLocalesActivos()" style="flex:1">🔄 Actualizar</button>
+            <button class="btn btn-primary btn-sm" onclick="if(window.syncVentasCloud)syncVentasCloud();recargarLocalesActivos()" style="flex:1">☁️ Sync y Actualizar</button>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--text3);text-align:center">
+            Un terminal = una computadora/dispositivo activado con tu licencia
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(m);
+  }
+  openModal('modalLocalesActivos');
+  await _cargarDatosLocales();
+}
+
+async function _cargarDatosLocales() {
+  var container = document.getElementById('localesGridContainer');
+  var slotInfo  = document.getElementById('localesSlotInfo');
+  if (!container) return;
+
+  // Obtener licencia actual
+  var lic = (window.DB ? DB.get('license') : null) || {};
+  var licCode = lic.code || null;
+
+  // Si es licencia MASTER mostrar mensaje especial
+  var masterCodes = ['BPRO-DEMO-2024','BPRO-ABIG-2024','BPRO-ZYNC-2024'];
+  if (!licCode || masterCodes.includes(licCode)) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:24px;color:var(--text2)">
+        <div style="font-size:32px;margin-bottom:8px">👑</div>
+        <div style="font-weight:700;color:var(--text);margin-bottom:6px">Licencia MASTER</div>
+        <div style="font-size:12px">Las licencias MASTER tienen acceso ilimitado.<br>No aplica conteo de terminales.</div>
+      </div>`;
+    if (slotInfo) slotInfo.textContent = 'MASTER — ilimitado';
+    return;
+  }
+
+  // Verificar si hay Firebase disponible
+  if (typeof window.cloudGet !== 'function') {
+    container.innerHTML = `
+      <div style="text-align:center;padding:24px;color:var(--warn)">
+        <div style="font-size:28px;margin-bottom:8px">⚠️</div>
+        <div style="font-size:13px">Firebase no disponible. Verifica tu conexión.</div>
+      </div>`;
+    return;
+  }
+
+  // Consultar Firestore
+  try {
+    var reg = await window.cloudGet('locales', licCode);
+    var issuedLics = window.DB ? (DB.get('licenses_issued') || []) : [];
+    var issuedLic  = issuedLics.find(function(l){ return l.code === licCode; });
+    var maxT = reg ? (reg.maxTerminales || 2) : (issuedLic ? (issuedLic.maxTerminales || 2) : 2);
+    var terminales = (reg && reg.terminales) ? reg.terminales : {};
+    var keys = Object.keys(terminales);
+    var activosCount = keys.length;
+
+    if (slotInfo) slotInfo.textContent = activosCount + ' / ' + maxT + ' terminal' + (maxT !== 1 ? 'es' : '');
+
+    // Actualizar badge sidebar
+    var badge = document.getElementById('localesCountBadge');
+    if (badge) { badge.textContent = activosCount; badge.style.display = activosCount > 0 ? 'inline' : 'none'; }
+
+    if (keys.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:28px;color:var(--text2)">
+          <div style="font-size:32px;margin-bottom:8px">🏪</div>
+          <div style="font-size:13px;margin-bottom:6px">Aún no hay terminales registrados.</div>
+          <div style="font-size:11px;color:var(--text3)">Presiona "Sync y Actualizar" para registrar este terminal.</div>
+        </div>`;
+      return;
+    }
+
+    var ahora = new Date();
+    var html = '<div class="locales-grid">';
+    keys.forEach(function(key) {
+      var t = terminales[key];
+      var ultimaSync = t.ultimaSync ? new Date(t.ultimaSync) : null;
+      var minutos = ultimaSync ? Math.round((ahora - ultimaSync) / 60000) : null;
+      var esOnline = minutos !== null && minutos < 15;
+      var syncLabel = minutos === null ? 'Sin registro'
+        : minutos < 1   ? 'Hace menos de 1 min'
+        : minutos < 60  ? 'Hace ' + minutos + ' min'
+        : minutos < 1440 ? 'Hace ' + Math.floor(minutos/60) + 'h'
+        : 'Hace ' + Math.floor(minutos/1440) + 'd';
+      var estadoClass = esOnline ? 'online' : 'offline';
+      html += `
+        <div class="local-card ${estadoClass}">
+          <div class="local-card-icon">${esOnline ? '🟢' : '⚫'}</div>
+          <div class="local-card-info">
+            <div class="local-card-name">
+              <span class="local-dot ${estadoClass}"></span>${t.nombre || key}
+            </div>
+            <div class="local-card-sub">ID: ${key} · Device: ${(t.deviceId||'—').slice(-6)}</div>
+          </div>
+          <div class="local-card-right">
+            <div class="local-ventas">$${(t.totalHoyUSD||0).toFixed(2)}</div>
+            <div class="local-sync">${t.ventasHoy||0} ventas · ${syncLabel}</div>
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+
+    // Mostrar slots disponibles si hay cupos libres
+    var libres = maxT - keys.length;
+    if (libres > 0) {
+      html += `<div style="margin-top:10px;border:1.5px dashed var(--border2);border-radius:10px;padding:12px;text-align:center;color:var(--text2);font-size:12px">
+        ➕ ${libres} slot${libres>1?'s':''} disponible${libres>1?'s':''} — activa otro dispositivo con el mismo código de licencia
+      </div>`;
+    }
+    container.innerHTML = html;
+
+  } catch(e) {
+    console.error('[Locales]', e);
+    container.innerHTML = `
+      <div style="text-align:center;padding:24px;color:var(--danger)">
+        <div style="font-size:28px;margin-bottom:8px">❌</div>
+        <div style="font-size:13px">Error al consultar Firestore.<br><small>${e.message||''}</small></div>
+      </div>`;
+  }
+}
+
+async function recargarLocalesActivos() {
+  var container = document.getElementById('localesGridContainer');
+  if (container) container.innerHTML = `
+    <div style="text-align:center;padding:30px;color:var(--text2)">
+      <div style="font-size:28px;margin-bottom:8px">☁️</div>
+      <div style="font-size:13px">Consultando Firestore...</div>
+    </div>`;
+  await _cargarDatosLocales();
+}
+
+window.abrirLocalesActivos  = abrirLocalesActivos;
+window.recargarLocalesActivos = recargarLocalesActivos;
+// ─── FIN LOCALES ACTIVOS ─────────────────────────────────────────
 </script>
 
 <!-- ═══════════════════════════════════════════════════════════════
