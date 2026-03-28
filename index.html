@@ -1274,6 +1274,16 @@ canvas{max-width:100%!important}
 .locales-header-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .locales-slot-badge{background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.3);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:var(--accent2)}
 #navLocales .locales-count-badge{background:var(--neon);color:#000;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px;vertical-align:middle}
+/* ── HARDWARE SECTION ── */
+.hw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:12px}
+.hw-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:16px;text-align:center;transition:all .2s}
+.hw-card.connected{border-color:#22c55e;background:rgba(34,197,94,0.08)}
+.hw-icon{font-size:28px;margin-bottom:8px}
+.hw-name{font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px}
+.hw-status{font-size:11px;color:var(--text2);margin-bottom:10px}
+.hw-status.ok{color:#22c55e;font-weight:700}
+/* ── TEMAS DE COLOR ── */
+.temas-wrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:20px}
 </style>
 
 <!-- ═══ FIREBASE SDK ═══ -->
@@ -2204,6 +2214,66 @@ canvas{max-width:100%!important}
           <button class="btn" style="background:#ef4444;color:#fff;font-weight:700" onclick="resetearTodo()">
             💣 Resetear App Completa
           </button>
+        </div>
+      </div>
+
+      <!-- PERIFÉRICOS Y HARDWARE -->
+      <div class="card" style="margin-top:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div class="card-title">🔌 Periféricos y Hardware</div>
+          <span style="font-size:11px;color:var(--text3)">Chrome + HTTPS requerido para hardware serial</span>
+        </div>
+        <div class="hw-grid">
+          <div class="hw-card" id="hw-card-balanza">
+            <div class="hw-icon">⚖️</div>
+            <div class="hw-name">Balanza Digital</div>
+            <div class="hw-status" id="hw-st-balanza">Desconectada</div>
+            <button class="btn btn-ghost btn-sm" onclick="conectarBalanza()">Conectar</button>
+          </div>
+          <div class="hw-card" id="hw-card-gaveta">
+            <div class="hw-icon">💰</div>
+            <div class="hw-name">Gaveta de Dinero</div>
+            <div class="hw-status" id="hw-st-gaveta">Desconectada</div>
+            <button class="btn btn-ghost btn-sm" onclick="conectarGaveta()">Conectar</button>
+          </div>
+          <div class="hw-card" id="hw-card-datafono">
+            <div class="hw-icon">💳</div>
+            <div class="hw-name">Datafono / POS</div>
+            <div class="hw-status" id="hw-st-datafono">Requiere integración</div>
+            <button class="btn btn-ghost btn-sm" onclick="infoDatafono()">¿Cómo integrar?</button>
+          </div>
+          <div class="hw-card" id="hw-card-biopago">
+            <div class="hw-icon">🫆</div>
+            <div class="hw-name">BioPago</div>
+            <div class="hw-status" id="hw-st-biopago">Requiere integración</div>
+            <button class="btn btn-ghost btn-sm" onclick="infoBioPago()">¿Cómo integrar?</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLORES Y TEMA -->
+      <div class="card" style="margin-top:20px;">
+        <div class="card-title" style="margin-bottom:4px;">🎨 Colores y Tema</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">Elige un tema predefinido o personaliza los colores de la aplicación.</div>
+        <div id="temas-grid" class="temas-wrap"></div>
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🖌️ Personalizar colores</div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+          <div class="form-group" style="flex:1;min-width:130px;">
+            <label class="form-label">Sidebar</label>
+            <input type="color" id="color-sidebar" class="form-input" style="height:40px;padding:4px 6px;cursor:pointer;" oninput="previewColor('sidebar',this.value)">
+          </div>
+          <div class="form-group" style="flex:1;min-width:130px;">
+            <label class="form-label">Color Acento</label>
+            <input type="color" id="color-acento" class="form-input" style="height:40px;padding:4px 6px;cursor:pointer;" oninput="previewColor('acento',this.value)">
+          </div>
+          <div class="form-group" style="flex:1;min-width:130px;">
+            <label class="form-label">Botón Activo</label>
+            <input type="color" id="color-activo" class="form-input" style="height:40px;padding:4px 6px;cursor:pointer;" oninput="previewColor('activo',this.value)">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="guardarColoresCustom()">💾 Aplicar Colores</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetearColores()">↩ Restablecer</button>
         </div>
       </div>
 
@@ -3485,6 +3555,8 @@ function startApp() {
   if (_licCheck && _licCheck.esDemo && _licCheck.venceEn) {
     setTimeout(function(){ iniciarDemoWatchdog(); }, 2000);
   }
+  // Cargar colores/tema guardado
+  if (typeof _cargarColores === 'function') _cargarColores();
 }
 
 // ─── NAVEGACIÓN ───────────────────────────────────────────────
@@ -3530,7 +3602,7 @@ function showPage(page, el) {
     document.getElementById('cfg-telefono').value = cfg.telefono || '';
     document.getElementById('cfg-rif').value = cfg.rif || '';
     document.getElementById('cfg-tasa').value = STATE.tasa;
-
+    if (typeof renderConfigColores === 'function') renderConfigColores();
   }
 }
 
@@ -9360,6 +9432,205 @@ function enviarIA(){
     cargando.classList.remove('cargando');
   },150);
 }
+</script>
+<script>
+// ═══════════════════════════════════════════════════════════
+//  🎨 SISTEMA DE TEMAS DE COLOR — Bodega Pro Cloud
+// ═══════════════════════════════════════════════════════════
+var TEMAS_COLORES = [
+  { id:'purpura', nombre:'💜 Púrpura', vars:{
+    '--accent':'#7c3aed','--accent2':'#9d5bf4','--accent3':'#a78bfa',
+    '--neon':'#06d6a0','--neon2':'#00f5c3','--sidebar-accent':'#7c3aed'
+  }},
+  { id:'neon', nombre:'🟢 Neón', vars:{
+    '--accent':'#06d6a0','--accent2':'#00f5c3','--accent3':'#34d399',
+    '--neon':'#7c3aed','--neon2':'#9d5bf4','--sidebar-accent':'#06d6a0'
+  }},
+  { id:'azul', nombre:'🔵 Azul', vars:{
+    '--accent':'#3b82f6','--accent2':'#60a5fa','--accent3':'#93c5fd',
+    '--neon':'#06d6a0','--neon2':'#00f5c3','--sidebar-accent':'#3b82f6'
+  }},
+  { id:'rojo', nombre:'🔴 Rojo', vars:{
+    '--accent':'#ef4444','--accent2':'#f87171','--accent3':'#fca5a5',
+    '--neon':'#f59e0b','--neon2':'#fbbf24','--sidebar-accent':'#ef4444'
+  }},
+  { id:'naranja', nombre:'🟠 Naranja', vars:{
+    '--accent':'#f97316','--accent2':'#fb923c','--accent3':'#fdba74',
+    '--neon':'#06d6a0','--neon2':'#00f5c3','--sidebar-accent':'#f97316'
+  }},
+  { id:'teal', nombre:'💎 Esmeralda', vars:{
+    '--accent':'#0d9488','--accent2':'#14b8a6','--accent3':'#2dd4bf',
+    '--neon':'#f97316','--neon2':'#fb923c','--sidebar-accent':'#0d9488'
+  }},
+];
+
+function _aplicarColoresCSS(vars) {
+  var root = document.documentElement;
+  Object.keys(vars).forEach(function(k){ root.style.setProperty(k, vars[k]); });
+}
+
+function _cargarColores() {
+  var cfg = (window.DB ? DB.get('config') : null) || {};
+  var temaId = cfg.tema_id || 'purpura';
+  var tema = TEMAS_COLORES.find(function(t){ return t.id === temaId; }) || TEMAS_COLORES[0];
+  _aplicarColoresCSS(tema.vars);
+  if (cfg.colores_custom && Object.keys(cfg.colores_custom).length) {
+    _aplicarColoresCSS(cfg.colores_custom);
+  }
+}
+
+function renderConfigColores() {
+  var wrap = document.getElementById('temas-grid');
+  if (!wrap) return;
+  var cfg = (window.DB ? DB.get('config') : null) || {};
+  var temaActivo = cfg.tema_id || 'purpura';
+  wrap.innerHTML = TEMAS_COLORES.map(function(t) {
+    var isActivo = t.id === temaActivo && !cfg.colores_custom;
+    var borde = isActivo ? '2.5px solid var(--accent2)' : '2px solid var(--border)';
+    var sombra = isActivo ? '0 0 0 2px rgba(124,58,237,.3)' : 'none';
+    return '<div onclick="aplicarTema(\''+t.id+'\')" style="cursor:pointer;border-radius:10px;border:'+borde+';box-shadow:'+sombra+';overflow:hidden;transition:all .2s;" title="'+t.nombre+'">'
+      + '<div style="display:flex;height:44px;">'
+      + '<div style="width:24px;background:'+t.vars['--accent']+';flex-shrink:0;"></div>'
+      + '<div style="flex:1;background:#12121e;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;padding:4px;">'
+      + '<div style="width:65%;height:5px;border-radius:3px;background:'+t.vars['--accent']+'"></div>'
+      + '<div style="width:45%;height:5px;border-radius:3px;background:'+t.vars['--neon']+'"></div>'
+      + '</div></div>'
+      + '<div style="background:#0f0f1a;padding:4px 6px;font-size:10px;font-weight:600;color:#e8e8f0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+      + (isActivo ? '✓ ' : '') + t.nombre + '</div></div>';
+  }).join('');
+  var pBase = cfg.colores_custom || (TEMAS_COLORES.find(function(t){ return t.id===temaActivo; })||TEMAS_COLORES[0]).vars;
+  var es = document.getElementById('color-sidebar'); if(es) es.value = pBase['--accent'] || '#7c3aed';
+  var ea = document.getElementById('color-acento');  if(ea) ea.value = pBase['--accent2'] || '#9d5bf4';
+  var eo = document.getElementById('color-activo');  if(eo) eo.value = pBase['--neon']    || '#06d6a0';
+}
+
+function aplicarTema(id) {
+  var tema = TEMAS_COLORES.find(function(t){ return t.id === id; });
+  if (!tema) return;
+  _aplicarColoresCSS(tema.vars);
+  var cfg = (window.DB ? DB.get('config') : null) || {};
+  cfg.tema_id = id; delete cfg.colores_custom;
+  if (window.DB) DB.set('config', cfg);
+  renderConfigColores();
+  if (typeof showToast === 'function') showToast('✅ Tema "'+tema.nombre+'" aplicado', 'success');
+}
+
+function previewColor(tipo, val) {
+  var root = document.documentElement;
+  if(tipo==='sidebar'){ root.style.setProperty('--accent',val); root.style.setProperty('--accent2',val); root.style.setProperty('--accent3',val); }
+  if(tipo==='acento') { root.style.setProperty('--accent2',val); }
+  if(tipo==='activo') { root.style.setProperty('--neon',val); root.style.setProperty('--neon2',val); }
+}
+
+function guardarColoresCustom() {
+  var es = document.getElementById('color-sidebar');
+  var ea = document.getElementById('color-acento');
+  var eo = document.getElementById('color-activo');
+  if (!es||!ea||!eo) return;
+  var custom = {
+    '--accent':es.value,'--accent2':es.value,'--accent3':es.value,
+    '--neon':eo.value,'--neon2':eo.value
+  };
+  _aplicarColoresCSS(custom);
+  var cfg = (window.DB ? DB.get('config') : null) || {};
+  cfg.colores_custom = custom;
+  if (window.DB) DB.set('config', cfg);
+  if (typeof showToast === 'function') showToast('✅ Colores guardados correctamente', 'success');
+  renderConfigColores();
+}
+
+function resetearColores() {
+  var cfg = (window.DB ? DB.get('config') : null) || {};
+  cfg.tema_id = 'purpura'; delete cfg.colores_custom;
+  if (window.DB) DB.set('config', cfg);
+  var root = document.documentElement;
+  var purpura = TEMAS_COLORES[0];
+  Object.keys(purpura.vars).forEach(function(k){ root.style.removeProperty(k); });
+  _aplicarColoresCSS(purpura.vars);
+  renderConfigColores();
+  if (typeof showToast === 'function') showToast('↩ Colores restablecidos al tema por defecto', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  🔌 HARDWARE / PERIFÉRICOS — WebSerial
+// ═══════════════════════════════════════════════════════════
+window._HW_CLOUD = { balanza: null, gaveta: null };
+window._balanzaPesoCloud = 0;
+
+async function conectarBalanza() {
+  if (!navigator.serial) { if(typeof showToast==='function') showToast('⚠️ Requiere Chrome y HTTPS para WebSerial','warn'); return; }
+  try {
+    var port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600 });
+    window._HW_CLOUD.balanza = port;
+    var el = document.getElementById('hw-st-balanza');
+    if(el){ el.textContent='✅ Conectada'; el.className='hw-status ok'; }
+    var card = document.getElementById('hw-card-balanza');
+    if(card) card.classList.add('connected');
+    if(typeof showToast==='function') showToast('✅ Balanza conectada','success');
+    _leerBalanzaCloud(port);
+  } catch(e) { if(typeof showToast==='function') showToast('❌ No se pudo conectar la balanza','warn'); }
+}
+
+async function _leerBalanzaCloud(port) {
+  var reader = port.readable.getReader(); var buf = '';
+  try {
+    while(true) {
+      var res = await reader.read(); if(res.done) break;
+      buf += new TextDecoder().decode(res.value);
+      var lines = buf.split('\n'); buf = lines.pop();
+      lines.forEach(function(line){
+        var num = parseFloat(line.replace(/[^0-9.]/g,''));
+        if(!isNaN(num)&&num>0){ window._balanzaPesoCloud=num; if(typeof showToast==='function') showToast('⚖️ Peso: '+num.toFixed(3)+' kg','info'); }
+      });
+    }
+  } catch(e) {}
+}
+
+async function conectarGaveta() {
+  if (!navigator.serial) { if(typeof showToast==='function') showToast('⚠️ Requiere Chrome y HTTPS para WebSerial','warn'); return; }
+  try {
+    var port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600 });
+    window._HW_CLOUD.gaveta = port;
+    var el = document.getElementById('hw-st-gaveta');
+    if(el){ el.textContent='✅ Conectada'; el.className='hw-status ok'; }
+    var card = document.getElementById('hw-card-gaveta');
+    if(card) card.classList.add('connected');
+    if(typeof showToast==='function') showToast('✅ Gaveta conectada','success');
+  } catch(e) { if(typeof showToast==='function') showToast('❌ No se pudo conectar la gaveta','warn'); }
+}
+
+async function abrirGavetaCloud() {
+  if (!window._HW_CLOUD.gaveta) { if(typeof showToast==='function') showToast('⚠️ Gaveta no conectada','warn'); return; }
+  try {
+    var writer = window._HW_CLOUD.gaveta.writable.getWriter();
+    await writer.write(new Uint8Array([0x1B,0x70,0x00,0x19,0xFA]));
+    writer.releaseLock();
+    if(typeof showToast==='function') showToast('💰 Gaveta abierta','success');
+  } catch(e) { if(typeof showToast==='function') showToast('❌ Error al abrir gaveta','warn'); }
+}
+
+function infoDatafono() {
+  if(typeof showToast==='function') showToast('💳 Datafono: Contacta a A2K Digital Studio para integración — +58 416 411 7331','info');
+}
+
+function infoBioPago() {
+  if(typeof showToast==='function') showToast('🫆 BioPago: Contacta a A2K Digital Studio para integración — +58 416 411 7331','info');
+}
+
+window.aplicarTema = aplicarTema;
+window.renderConfigColores = renderConfigColores;
+window.guardarColoresCustom = guardarColoresCustom;
+window.resetearColores = resetearColores;
+window.previewColor = previewColor;
+window._cargarColores = _cargarColores;
+window.conectarBalanza = conectarBalanza;
+window.conectarGaveta = conectarGaveta;
+window.abrirGavetaCloud = abrirGavetaCloud;
+window.infoDatafono = infoDatafono;
+window.infoBioPago = infoBioPago;
+// ─── FIN HARDWARE + TEMAS ────────────────────────────────
 </script>
 </body>
 </html>
