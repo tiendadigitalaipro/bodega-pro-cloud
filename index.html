@@ -3358,6 +3358,23 @@ async function doLogin() {
   try { _bpLic = _bpRaw ? JSON.parse(_bpRaw) : null; } catch(e){}
   const savedLicense = DB.get('license') || _bpLic;
   console.log('[A2K LOGIN] savedLicense:', savedLicense ? JSON.stringify(savedLicense) : 'null');
+
+  // ── FIX: Si el código coincide con la licencia guardada, es el mismo equipo
+  // aunque el Device ID haya cambiado (ej. actualización de Chrome).
+  // Actualizamos el deviceId automáticamente y dejamos entrar sin bloqueo.
+  if (savedLicense && savedLicense.code === code) {
+    if (savedLicense.deviceId !== DEVICE_ID) {
+      // Device ID cambió — actualizar silenciosamente
+      savedLicense.deviceId = DEVICE_ID;
+      DB.set('license', savedLicense);
+    }
+    const session = { negocio, user, deviceId: DEVICE_ID, loginAt: new Date().toISOString() };
+    DB.set('session', session);
+    STATE.user = session;
+    startApp();
+    return;
+  }
+
   if (savedLicense && savedLicense.deviceId === DEVICE_ID) {
     if (savedLicense.code === code) {
       // Mismo código — login directo
