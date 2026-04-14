@@ -1284,6 +1284,15 @@ canvas{max-width:100%!important}
 .hw-status.ok{color:#22c55e;font-weight:700}
 /* ── TEMAS DE COLOR ── */
 .temas-wrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;margin-bottom:20px}
+/* ── MODO EMPLEADO ── */
+body.modo-empleado .emp-hidden{display:none!important}
+body.modo-empleado .emp-locked{pointer-events:none!important;opacity:0.3!important;filter:grayscale(1)}
+body.modo-empleado #emp-mode-badge{display:flex!important}
+#emp-mode-badge{display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;padding:10px 22px;border-radius:30px;font-size:13px;font-weight:700;z-index:99998;gap:12px;align-items:center;box-shadow:0 4px 20px rgba(220,38,38,0.5);animation:pulseRed 2s infinite}
+@keyframes pulseRed{0%,100%{box-shadow:0 4px 20px rgba(220,38,38,0.5)}50%{box-shadow:0 4px 30px rgba(220,38,38,0.9)}}
+.emp-unlock-btn{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:4px 12px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600}
+.btn-modo-empleado{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text);cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;margin-top:8px;transition:.2s}
+.btn-modo-empleado:hover{background:var(--bg3)}
 </style>
 
 <!-- ═══ FIREBASE SDK ═══ -->
@@ -1530,13 +1539,13 @@ canvas{max-width:100%!important}
       <div class="nav-item" onclick="showPage(&#39;clientes&#39;,this)" data-page="clientes">
         <span class="nav-icon">👥</span><span class="nav-label">Clientes / Fiados</span>
       </div>
-      <div class="nav-item" onclick="showPage(&#39;reportes&#39;,this)" data-page="reportes">
+      <div class="nav-item emp-hidden" onclick="showPage(&#39;reportes&#39;,this)" data-page="reportes">
         <span class="nav-icon">📈</span><span class="nav-label">Reportes</span>
       </div>
-      <div class="nav-item" onclick="showPage(&#39;proveedores&#39;,this)" data-page="proveedores">
+      <div class="nav-item emp-hidden" onclick="showPage(&#39;proveedores&#39;,this)" data-page="proveedores">
         <span class="nav-icon">🏭</span><span class="nav-label">Proveedores</span>
       </div>
-      <div class="nav-item" onclick="showPage(&#39;configuracion&#39;,this)" data-page="configuracion">
+      <div class="nav-item emp-hidden" onclick="showPage(&#39;configuracion&#39;,this)" data-page="configuracion">
         <span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span>
       </div>
       <div class="nav-item" id="navUsuarios" onclick="showPage(&#39;usuarios&#39;,this)" data-page="usuarios">
@@ -1551,6 +1560,9 @@ canvas{max-width:100%!important}
         <span style="font-size:16px">💬</span>
         <span class="nav-label">Soporte A2K</span>
       </a>
+      <button class="btn-modo-empleado" onclick="toggleModoEmpleado()" id="btnModoEmpleado">
+        <span id="empModeIcon">🔓</span><span class="nav-label" style="flex:1">Modo Empleado</span>
+      </button>
       <button class="sidebar-collapse-btn" onclick="toggleSidebar()">
         <span class="nav-icon" id="collapseIcon">◀</span>
         <span class="nav-label" id="collapseLabel">Colapsar</span>
@@ -1852,7 +1864,7 @@ canvas{max-width:100%!important}
             <div class="section-title">Inventario</div>
             <div class="section-sub" style="margin-bottom:0">Gestión de productos y stock</div>
           </div>
-          <button class="btn btn-primary" onclick="openAddProduct()">+ Nuevo Producto</button>
+          <button class="btn btn-primary emp-hidden" onclick="openAddProduct()">+ Nuevo Producto</button>
           <button class="btn btn-ghost btn-sm" onclick="abrirEtiquetas()" title="Imprimir etiquetas de productos">🏷️ Etiquetas</button>
         </div>
         <div class="inv-toolbar">
@@ -1931,8 +1943,8 @@ canvas{max-width:100%!important}
           </div>
           <div class="flex gap-2">
             <button class="btn btn-primary" onclick="abrirCaja()">📂 Abrir Caja</button>
-            <button class="btn btn-danger" onclick="cerrarCaja()">🔒 Cerrar Caja</button>
-            <button class="btn btn-neon" onclick="declararCierreCaja()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;box-shadow:0 4px 15px rgba(245,158,11,0.3)">🧾 Declarar Cierre</button>
+            <button class="btn btn-danger emp-hidden" onclick="cerrarCajaConPermisos()">🔒 Cerrar Caja</button>
+            <button class="btn btn-neon emp-hidden" onclick="declararCierreCaja()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;box-shadow:0 4px 15px rgba(245,158,11,0.3)">🧾 Declarar Cierre</button>
           </div>
         </div>
         <div class="grid-4 mb-4" id="cajaStats"><div class="stat-card" style="--c1:var(--neon);--c2:var(--accent)"><div class="stat-label">Estado Caja</div><div class="stat-val" style="color:var(--danger)">CERRADA</div></div><div class="stat-card" style="--c1:var(--neon);--c2:var(--accent)"><div class="stat-label">Total en Caja</div><div class="stat-val neon-text">$0.00</div></div><div class="stat-card" style="--c1:var(--accent);--c2:var(--neonb)"><div class="stat-label">Ventas Hoy</div><div class="stat-val accent-glow">$0.00</div></div><div class="stat-card" style="--c1:var(--danger);--c2:var(--warn)"><div class="stat-label">Salidas</div><div class="stat-val" style="color:var(--danger)">$0.00</div></div></div>
@@ -2336,6 +2348,21 @@ canvas{max-width:100%!important}
           </div>
         </div>
       </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px">
+        <label style="font-size:12px;color:var(--text2);font-weight:600;display:block;margin-bottom:10px">FOTO DEL PRODUCTO</label>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div id="prod-foto-preview-wrap" style="width:72px;height:72px;border-radius:12px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;flex-shrink:0;background:var(--bg3)" onclick="document.getElementById('prod-foto-file').click()">
+            <span id="prod-foto-placeholder" style="font-size:28px">📷</span>
+            <img id="prod-foto-preview" src="" alt="" style="display:none;width:72px;height:72px;object-fit:cover;border-radius:10px">
+          </div>
+          <div style="flex:1">
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('prod-foto-file').click()" style="width:100%;margin-bottom:8px">📷 Cámara / Galería</button>
+            <button type="button" id="prod-foto-clear" onclick="clearProductPhoto()" style="display:none;width:100%;padding:6px;background:transparent;border:1px solid var(--danger);border-radius:8px;color:var(--danger);cursor:pointer;font-size:12px">🗑️ Quitar foto</button>
+          </div>
+        </div>
+        <input type="file" id="prod-foto-file" accept="image/*" style="display:none" onchange="handleProductPhoto(this)">
+        <input type="hidden" id="prod-foto-data">
+      </div>
       <div class="grid-2">
         <div class="form-group">
           <label class="form-label">Categoría</label>
@@ -2684,6 +2711,40 @@ canvas{max-width:100%!important}
         <div id="mixtoRemanente" style="margin-top:8px;font-size:12px;font-family:var(--mono)"></div>
       </div>
 
+      <!-- PANEL CASHEA -->
+      <div id="casheaSection" style="display:none;margin-top:16px">
+        <div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border:2px solid #00b4d8;border-radius:16px;padding:18px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <span style="font-size:24px">🤝</span>
+            <div><div style="color:#00b4d8;font-weight:700;font-size:14px">CASHEA FINANCING</div><div style="color:#aaa;font-size:11px">Financiamiento inmediato Venezuela</div></div>
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:600">LÍNEA DE CRÉDITO</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <button onclick="selectCasheaLine('principal')" id="cashea-btn-principal" class="btn btn-outline" style="font-size:12px;padding:8px;border-color:#00b4d8;color:#00b4d8">💎 Principal<br><span style="font-size:10px;opacity:.7">3 cuotas</span></button>
+              <button onclick="selectCasheaLine('cotidiana')" id="cashea-btn-cotidiana" class="btn btn-outline" style="font-size:12px;padding:8px">🛒 Cotidiana<br><span style="font-size:10px;opacity:.7">1 cuota</span></button>
+            </div>
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="font-size:11px;color:#aaa;margin-bottom:6px;font-weight:600">PAGO INICIAL</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+              <button onclick="setCasheaPct(50)" id="cashea-btn-50" class="btn btn-outline btn-sm" style="font-size:12px">50%</button>
+              <button onclick="setCasheaPct(60)" id="cashea-btn-60" class="btn btn-outline btn-sm" style="font-size:12px;border-color:#00b4d8;color:#00b4d8">60%</button>
+              <button onclick="setCasheaPct(70)" id="cashea-btn-70" class="btn btn-outline btn-sm" style="font-size:12px">70%</button>
+            </div>
+          </div>
+          <div style="background:rgba(0,180,216,0.1);border:1px solid rgba(0,180,216,0.3);border-radius:10px;padding:12px;margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:#aaa;font-size:12px">Total:</span><span id="cashea-total-display" style="color:#fff;font-weight:700;font-size:13px">$0.00</span></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:#aaa;font-size:12px">Pago inicial hoy:</span><span id="cashea-inicial-display" style="color:#00ff88;font-weight:700;font-size:13px">$0.00</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#aaa;font-size:12px">Financiado por Cashea:</span><span id="cashea-financiado-display" style="color:#00b4d8;font-weight:700;font-size:13px">$0.00</span></div>
+          </div>
+          <div>
+            <label style="font-size:11px;color:#aaa;font-weight:600;display:block;margin-bottom:6px">N° REFERENCIA CASHEA *</label>
+            <input type="text" id="cashea-referencia" placeholder="Ej: CSH-2024-001234" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #00b4d8;background:rgba(0,180,216,0.1);color:#fff;font-size:14px;box-sizing:border-box">
+          </div>
+        </div>
+      </div>
+
       <div class="divider"></div>
       <div class="form-group">
         <label class="form-label">Cliente (opcional)</label>
@@ -2886,6 +2947,7 @@ const PAISES = {
       { id:'biopago',       label:'Bio Pago',         icon:'🟢', currency:'LOCAL' },
       { id:'fiado',         label:'Fiado',            icon:'📝', currency:'LOCAL' },
       { id:'mixto',         label:'Pago Mixto',       icon:'🔀', currency:'MIX' },
+      { id:'cashea',        label:'Cashea',           icon:'🤝', currency:'USD' },
     ],
   },
   CO: {
@@ -3039,6 +3101,7 @@ let STATE = {
   payMethod: 'Efectivo $',
   charts: {},
   currentPage: 'dashboard',
+  userRole: 'admin',
 };
 
 const PAYMENT_METHODS = [
@@ -3056,6 +3119,7 @@ const PAYMENT_METHODS = [
   { id: 'mixto',         label: 'Pago Mixto',          icon: '🔀', currency: 'MIX' },
   { id: 'fiado',         label: 'Fiado',               icon: '📝', currency: 'BS'  },
   { id: 'biopago', label: 'Bio Pago', icon: '🟢', currency: 'BS'  },
+  { id: 'cashea',  label: 'Cashea',   icon: '🤝', currency: 'USD' },
 ];
 
 const CAT_ICONS = {
@@ -3557,10 +3621,19 @@ function startApp() {
   }
   // Cargar colores/tema guardado
   if (typeof _cargarColores === 'function') _cargarColores();
+  // Restaurar modo empleado si estaba activo
+  if (localStorage.getItem('a2k_userRole') === 'empleado') {
+    setTimeout(function(){ aplicarModoEmpleado(true); }, 300);
+  }
 }
 
 // ─── NAVEGACIÓN ───────────────────────────────────────────────
 function showPage(page, el) {
+  var _EMP_BLOQUEADAS = ['reportes','proveedores','configuracion'];
+  if (STATE.userRole === 'empleado' && _EMP_BLOQUEADAS.includes(page)) {
+    showToast('🔒 Acceso restringido — Solo el administrador puede ver esta sección','error');
+    return;
+  }
   document.querySelectorAll('[id^="page-"]').forEach(function(p){ p.style.display = 'none'; });
   var targetPage = document.getElementById('page-' + page);
   if (targetPage) targetPage.style.display = 'block';
@@ -3720,8 +3793,11 @@ function renderPosProducts() {
 
   document.getElementById('posProductsGrid').innerHTML = filtered.map(p => {
     const stockClass = (p.stock||0) === 0 ? 'stock-out' : (p.stock||0) <= p.stockMin ? 'stock-low' : '';
+    const imgOrEmoji = p.foto
+      ? `<img src="${p.foto}" style="width:52px;height:52px;object-fit:cover;border-radius:10px;margin-bottom:6px;display:block" alt="">`
+      : `<span class="p-emoji">${p.emoji}</span>`;
     return `<div class="product-card ${(p.stock||0) === 0 ? 'opacity-50' : ''}" onclick="addToCart(${p.id})" style="${(p.stock||0)===0?'opacity:0.5;pointer-events:none':''}">
-      <span class="p-emoji">${p.emoji}</span>
+      ${imgOrEmoji}
       <div class="p-name">${p.nombre}</div>
       <div class="p-price">$${(p.precio||0).toFixed(2)}</div>
       <div class="p-stock ${stockClass}">${(p.stock||0)===0?'Sin stock':(p.stock||0)+' '+p.unidad}</div>
@@ -3926,6 +4002,9 @@ function procesarVenta() {
     clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
 
   openModal('modalCobro');
+  // Cashea section visibility
+  var _isCashea = (STATE.payMethod || '') === 'Cashea';
+  mostrarCasheaSection(_isCashea);
   // Activar/desactivar panel POS según método de pago seleccionado
   setTimeout(_togglePOSPanel, 80);
 }
@@ -3936,6 +4015,11 @@ function confirmarVenta() {
   var clienteId = parseInt(document.getElementById('cobro-cliente').value) || null;
   var notas = document.getElementById('cobro-notas').value;
 
+  // Validar Cashea
+  if (STATE.payMethod === 'Cashea') {
+    var _refCashea = document.getElementById('cashea-referencia');
+    if (!_refCashea || !_refCashea.value.trim()) { showToast('⚠️ Ingresa el número de referencia Cashea','warn'); return; }
+  }
   // Validar Pago Mixto
   if (STATE.payMethod === 'Pago Mixto') {
     if (!STATE.pagosMixtos.length) return showToast('Agrega al menos un método de pago mixto','warn');
@@ -3976,6 +4060,11 @@ function _ejecutarVenta(total, clienteId, notas) {
     tasa: STATE.tasa,
     txId: txId || undefined,          // ID transacción POS/terminal
     estado: 'pagada',                 // estado explícito de la venta
+    casheaDetalle: STATE.payMethod === 'Cashea' ? {
+      linea: CASHEA_STATE.linea,
+      pct: CASHEA_STATE.pct,
+      referencia: document.getElementById('cashea-referencia') ? document.getElementById('cashea-referencia').value : ''
+    } : null,
   };
 
   // Guardar venta
@@ -4441,8 +4530,11 @@ function renderInventario() {
     var bc = p.stock === 0 ? 'badge-red' : p.stock <= p.stockMin ? 'badge-yellow' : 'badge-green';
     var bt = p.stock === 0 ? 'Sin stock' : p.stock <= p.stockMin ? 'Stock bajo' : 'Normal';
     var dotColor = p.stock===0?'var(--danger)':p.stock<=p.stockMin?'var(--warn)':'var(--success)';
+    var prodImg = p.foto
+      ? '<img src="' + p.foto + '" style="width:34px;height:34px;object-fit:cover;border-radius:8px;flex-shrink:0" alt="">'
+      : '<span style="font-size:18px">' + p.emoji + '</span>';
     return '<tr>' +
-      '<td><div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">' + p.emoji + '</span>' +
+      '<td><div style="display:flex;align-items:center;gap:8px">' + prodImg +
         '<div><div style="font-weight:600">' + p.nombre + '</div>' +
         '<div style="font-size:11px;color:var(--text2)">' + (p.codigo||'—') + '</div></div></div></td>' +
       '<td><span class="badge badge-purple">' + p.categoria + '</span></td>' +
@@ -4454,9 +4546,9 @@ function renderInventario() {
         p.stock + ' ' + p.unidad + '</div></td>' +
       '<td><span class="badge ' + bc + '">' + bt + '</span></td>' +
       '<td><div style="display:flex;gap:6px">' +
-        '<button class="btn btn-sm btn-outline" onclick="editProduct(' + p.id + ')">✏️</button>' +
-        '<button class="btn btn-sm btn-ghost" onclick="adjustStock(' + p.id + ')">📦</button>' +
-        '<button class="btn btn-sm btn-danger" onclick="deleteProduct(' + p.id + ')">🗑️</button>' +
+        '<button class="btn btn-sm btn-outline emp-hidden" onclick="editProduct(' + p.id + ')">✏️</button>' +
+        '<button class="btn btn-sm btn-ghost emp-hidden" onclick="adjustStock(' + p.id + ')">📦</button>' +
+        '<button class="btn btn-sm btn-danger emp-hidden" onclick="deleteProduct(' + p.id + ')">🗑️</button>' +
       '</div></td></tr>';
   }).join('') || '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text2)">No hay productos</td></tr>';
 }
@@ -4487,6 +4579,20 @@ function openAddProduct(id) {
     document.getElementById('prod-stock').value = p.stock;
     document.getElementById('prod-stockMin').value = p.stockMin;
     document.getElementById('prod-unidad').value = p.unidad;
+    // Foto del producto al editar
+    var fEl=document.getElementById('prod-foto-data'), fPr=document.getElementById('prod-foto-preview');
+    var fPl=document.getElementById('prod-foto-placeholder'), fCl=document.getElementById('prod-foto-clear');
+    if (p.foto) {
+      if(fEl) fEl.value=p.foto;
+      if(fPr){fPr.src=p.foto;fPr.style.display='block';}
+      if(fPl) fPl.style.display='none';
+      if(fCl) fCl.style.display='block';
+    } else {
+      if(fEl) fEl.value='';
+      if(fPr){fPr.src='';fPr.style.display='none';}
+      if(fPl) fPl.style.display='flex';
+      if(fCl) fCl.style.display='none';
+    }
   } else {
     ['prod-id','prod-nombre','prod-emoji','prod-codigo','prod-costo','prod-precio','prod-stock','prod-stockMin','prod-costo-bulto','prod-unidades-bulto','prod-cant-bultos','prod-ganancia-pct','calc-total-unidades'].forEach(function(fid){
       var el = document.getElementById(fid); if(el) el.value = '';
@@ -4499,6 +4605,11 @@ function openAddProduct(id) {
     // Auto-emoji para Bebidas al abrir
     var emojiEl = document.getElementById('prod-emoji');
     if (emojiEl && !emojiEl.value.trim()) emojiEl.value = CAT_ICONS['Bebidas'] || '🥤';
+    // Limpiar foto al agregar nuevo
+    var fEl2=document.getElementById('prod-foto-data');if(fEl2)fEl2.value='';
+    var fPr2=document.getElementById('prod-foto-preview');if(fPr2){fPr2.src='';fPr2.style.display='none';}
+    var fPl2=document.getElementById('prod-foto-placeholder');if(fPl2)fPl2.style.display='flex';
+    var fCl2=document.getElementById('prod-foto-clear');if(fCl2)fCl2.style.display='none';
   }
   openModal('modalProducto');
 }
@@ -4733,6 +4844,7 @@ function saveProduct() {
     id: existingId || Date.now(),
     nombre: nombre,
     emoji: document.getElementById('prod-emoji').value || '📦',
+    foto: (document.getElementById('prod-foto-data') ? document.getElementById('prod-foto-data').value : '') || '',
     categoria: document.getElementById('prod-categoria').value,
     codigo: document.getElementById('prod-codigo').value,
     costo: parseFloat(document.getElementById('prod-costo').value) || 0,
@@ -4836,7 +4948,7 @@ function renderHistorial() {
       '<td><div style="display:flex;gap:4px">' +
         '<button class="btn btn-sm btn-outline" onclick="verDetalleVenta(' + v.id + ')">👁</button>' +
         '<button class="btn btn-sm btn-ghost" onclick="reimprimirRecibo(' + v.id + ')">🧾</button>' +
-        (!v.devuelta ? '<button class="btn btn-sm btn-danger" onclick="abrirDevolucion(' + v.id + ')" title="Devolver">↩️</button>' : '') +
+        (!v.devuelta ? '<button class="emp-hidden btn btn-sm btn-danger" onclick="abrirDevolucion(' + v.id + ')" title="Devolver">↩️</button>' : '') +
       '</div></td></tr>';
   }).join('') || '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--text2)">Sin ventas</td></tr>';
 }
@@ -9631,6 +9743,150 @@ window.abrirGavetaCloud = abrirGavetaCloud;
 window.infoDatafono = infoDatafono;
 window.infoBioPago = infoBioPago;
 // ─── FIN HARDWARE + TEMAS ────────────────────────────────
+
+// ===== SISTEMA ROLES EMPLEADO =====
+function aplicarModoEmpleado(activo){
+  STATE.userRole = activo ? 'empleado' : 'admin';
+  if(activo){
+    document.body.classList.add('modo-empleado');
+    localStorage.setItem('a2k_userRole','empleado');
+    var icon=document.getElementById('empModeIcon');
+    var label=document.querySelector('#btnModoEmpleado .nav-label');
+    if(icon) icon.textContent='🔒';
+    if(label) label.textContent='Desactivar Modo Empleado';
+  } else {
+    document.body.classList.remove('modo-empleado');
+    localStorage.setItem('a2k_userRole','admin');
+    var icon2=document.getElementById('empModeIcon');
+    var label2=document.querySelector('#btnModoEmpleado .nav-label');
+    if(icon2) icon2.textContent='🔓';
+    if(label2) label2.textContent='Modo Empleado';
+  }
+}
+function toggleModoEmpleado(){
+  if(STATE.userRole==='empleado'){ salirModoEmpleado(); return; }
+  if(!confirm('¿Activar Modo Empleado?\n\nLos empleados no podrán:\n• Editar/eliminar inventario\n• Cerrar caja\n• Ver reportes, proveedores o configuración\n• Hacer devoluciones\n\nPara desactivar se necesita contraseña de admin.')) return;
+  aplicarModoEmpleado(true);
+  showToast('🔒 Modo Empleado activado','info');
+}
+function salirModoEmpleado(){
+  var ov=document.createElement('div');
+  ov.id='_empUnlockOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML='<div style="background:var(--bg2,#1e1e2e);border:1px solid var(--border,#333);border-radius:20px;padding:32px;width:320px;text-align:center">'
+    +'<div style="font-size:40px;margin-bottom:12px">🔐</div>'
+    +'<h3 style="color:var(--text,#fff);margin-bottom:8px">Contraseña Admin</h3>'
+    +'<p style="color:var(--text2,#aaa);font-size:13px;margin-bottom:20px">Ingresa la contraseña para desactivar el Modo Empleado</p>'
+    +'<input type="password" id="_empPwInput" placeholder="Contraseña" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border,#333);background:var(--bg3,#2a2a3e);color:var(--text,#fff);font-size:16px;margin-bottom:16px;box-sizing:border-box">'
+    +'<div style="display:flex;gap:10px">'
+    +'<button onclick="document.getElementById(\'_empUnlockOv\').remove()" style="flex:1;padding:12px;border-radius:10px;border:1px solid var(--border,#333);background:transparent;color:var(--text,#fff);cursor:pointer">Cancelar</button>'
+    +'<button onclick="_verificarEmpPw()" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--neon,#00ff88);color:#000;font-weight:700;cursor:pointer">Confirmar</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  setTimeout(function(){var i=document.getElementById('_empPwInput');if(i)i.focus();},100);
+  var inp=document.getElementById('_empPwInput');
+  if(inp) inp.addEventListener('keydown',function(e){if(e.key==='Enter')_verificarEmpPw();});
+}
+function _verificarEmpPw(){
+  var pw=['ZYNC2024admin','admin','zync','a2k2026'];
+  var val=(document.getElementById('_empPwInput')||{}).value||'';
+  if(pw.includes(val)){
+    var ov=document.getElementById('_empUnlockOv'); if(ov)ov.remove();
+    aplicarModoEmpleado(false);
+    showToast('✅ Modo Admin restaurado','success');
+  } else {
+    showToast('❌ Contraseña incorrecta','error');
+    var i=document.getElementById('_empPwInput'); if(i){i.value='';i.focus();}
+  }
+}
+function cerrarCajaConPermisos(){
+  if(STATE.userRole==='empleado'){ showToast('🔒 Solo el administrador puede cerrar la caja','error'); return; }
+  if(typeof cerrarCaja==='function') cerrarCaja();
+}
+
+// ===== FOTO PRODUCTO =====
+function handleProductPhoto(input){
+  var file=input.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var MAX=480,w=img.width,h=img.height;
+      if(w>h&&w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      else if(h>w&&h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+      else if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+      var canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      var data=canvas.toDataURL('image/jpeg',0.78);
+      var preview=document.getElementById('prod-foto-preview');
+      var placeholder=document.getElementById('prod-foto-placeholder');
+      var dataInput=document.getElementById('prod-foto-data');
+      var clearBtn=document.getElementById('prod-foto-clear');
+      if(preview){preview.src=data;preview.style.display='block';}
+      if(placeholder)placeholder.style.display='none';
+      if(dataInput)dataInput.value=data;
+      if(clearBtn)clearBtn.style.display='block';
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function clearProductPhoto(){
+  var preview=document.getElementById('prod-foto-preview');
+  var placeholder=document.getElementById('prod-foto-placeholder');
+  var dataInput=document.getElementById('prod-foto-data');
+  var clearBtn=document.getElementById('prod-foto-clear');
+  if(preview){preview.src='';preview.style.display='none';}
+  if(placeholder)placeholder.style.display='flex';
+  if(dataInput)dataInput.value='';
+  if(clearBtn)clearBtn.style.display='none';
+  var fileInput=document.getElementById('prod-foto-file');
+  if(fileInput)fileInput.value='';
+}
+
+// ===== CASHEA FINANCING =====
+var CASHEA_STATE={linea:'principal',pct:60};
+function mostrarCasheaSection(show){
+  var cs=document.getElementById('casheaSection');
+  var ms=document.getElementById('mixtoPanelCobro');
+  if(cs)cs.style.display=show?'block':'none';
+  if(show&&ms)ms.style.display='none';
+  if(show)calcCasheaResumen();
+}
+function selectCasheaLine(l){
+  CASHEA_STATE.linea=l;
+  var p=document.getElementById('cashea-btn-principal');
+  var c=document.getElementById('cashea-btn-cotidiana');
+  if(p){p.style.borderColor=l==='principal'?'#00b4d8':'';p.style.color=l==='principal'?'#00b4d8':'';}
+  if(c){c.style.borderColor=l==='cotidiana'?'#00b4d8':'';c.style.color=l==='cotidiana'?'#00b4d8':'';}
+  calcCasheaResumen();
+}
+function setCasheaPct(p){
+  CASHEA_STATE.pct=p;
+  [50,60,70].forEach(function(v){
+    var btn=document.getElementById('cashea-btn-'+v);
+    if(btn){btn.style.borderColor=v===p?'#00b4d8':'';btn.style.color=v===p?'#00b4d8':'';}
+  });
+  calcCasheaResumen();
+}
+function calcCasheaResumen(){
+  var total=0;
+  if(STATE.cart&&STATE.cart.length) STATE.cart.forEach(function(i){total+=((i.precio||0)*(i.qty||1));});
+  var inicial=total*(CASHEA_STATE.pct/100);
+  var financiado=total-inicial;
+  var tEl=document.getElementById('cashea-total-display');
+  var iEl=document.getElementById('cashea-inicial-display');
+  var fEl=document.getElementById('cashea-financiado-display');
+  if(tEl)tEl.textContent='$'+total.toFixed(2);
+  if(iEl)iEl.textContent='$'+inicial.toFixed(2);
+  if(fEl)fEl.textContent='$'+financiado.toFixed(2);
+}
 </script>
+
+<div id="emp-mode-badge">
+  🔒 MODO EMPLEADO ACTIVO
+  <button class="emp-unlock-btn" onclick="salirModoEmpleado()">🔓 Desbloquear</button>
+</div>
 </body>
 </html>
