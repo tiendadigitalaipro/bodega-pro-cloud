@@ -2864,16 +2864,32 @@ function sstyle(id, prop, v) { var el = document.getElementById(id); if(el) el.s
 
 
 function getDeviceId() {
+  // ── CLAVE: ID persistente — se genera UNA sola vez y se guarda en múltiples lugares ──
+  // Así sobrevive actualizaciones de Chrome, cambios de resolución, userAgent, etc.
+  var KEY = 'a2k_device_id';
+  // 1. Intentar desde localStorage
+  try { var ls = localStorage.getItem(KEY); if (ls && ls.startsWith('DEV-')) return ls; } catch(e){}
+  // 2. Intentar desde cookie
   try {
-    var nav = window.navigator || {};
-    var scr = window.screen || {};
-    var fp = [nav.userAgent||'ua', nav.language||'es', scr.colorDepth||24,
-      (scr.width||1920)+'x'+(scr.height||1080), new Date().getTimezoneOffset(),
-      nav.hardwareConcurrency||4, nav.platform||'Win32'].join('|');
-    var h = 0;
-    for (var i=0; i<fp.length; i++) { h=((h<<5)-h)+fp.charCodeAt(i); h=h&h; }
-    return 'DEV-'+Math.abs(h).toString(36).toUpperCase().slice(0,4)+'-'+Math.abs(h>>8).toString(36).toUpperCase().slice(0,4);
-  } catch(e) { return 'DEV-ZYNC-2025'; }
+    var m = document.cookie.match(/(?:^|;\s*)a2k_did=([^;]+)/);
+    if (m && m[1] && m[1].startsWith('DEV-')) {
+      try { localStorage.setItem(KEY, m[1]); } catch(e){}
+      return m[1];
+    }
+  } catch(e){}
+  // 3. Intentar desde sessionStorage
+  try { var ss = sessionStorage.getItem(KEY); if (ss && ss.startsWith('DEV-')) {
+    try { localStorage.setItem(KEY, ss); } catch(e){}
+    return ss;
+  }} catch(e){}
+  // 4. No encontrado — generar nuevo ID aleatorio (NO basado en fingerprint)
+  function rand4() { return Math.random().toString(36).substring(2,6).toUpperCase(); }
+  var newId = 'DEV-' + rand4() + '-' + rand4();
+  // Guardar en TODOS los stores disponibles
+  try { localStorage.setItem(KEY, newId); } catch(e){}
+  try { sessionStorage.setItem(KEY, newId); } catch(e){}
+  try { document.cookie = 'a2k_did=' + newId + ';max-age=31536000;path=/;samesite=lax'; } catch(e){}
+  return newId;
 }
 
 const DEVICE_ID = getDeviceId();
