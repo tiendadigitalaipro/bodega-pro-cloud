@@ -2212,108 +2212,117 @@ body.modo-empleado #emp-mode-badge{display:flex!important}
           </div>
         </div>
 
-        <!-- ══ CLAVE MODO EMPLEADO ══ -->
-        <div class="card" style="border:2px solid var(--accent);margin-top:16px">
-          <div class="card-title mb-1" style="color:var(--accent)">🔒 Clave de Bloqueo Empleados</div>
-          <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
-            Esta clave protege las secciones sensibles. Se pide cuando un empleado intenta desactivar el Modo Empleado o cerrar la caja.
-          </p>
-          <div id="empClaveStatus" style="display:none;padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:12px"></div>
-          <div id="empClaveActualWrap" class="form-group">
-            <label class="form-label">Clave actual <span style="font-size:11px;color:var(--text2)">(dejar vacío si es primera vez)</span></label>
-            <input type="password" id="emp-clave-actual" class="form-input" placeholder="Vacío si nunca configuraste una clave">
+        <!-- ══ BACKUP ══ -->
+        <div class="card" style="border:1px solid var(--neon);margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div>
+              <div class="card-title" style="color:var(--neon);margin-bottom:2px">💾 Backup y Restauración</div>
+              <div style="font-size:12px;color:var(--text2)">Exporta o importa todos los datos del negocio</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="exportarBackup()">📤 Exportar</button>
+              <button class="btn btn-sm" style="background:var(--accent);color:#fff;font-weight:700" onclick="document.getElementById('importBackupFile').click()">📥 Importar</button>
+              <input type="file" id="importBackupFile" accept=".json" style="display:none" onchange="importarBackup(this)">
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label">Nueva clave</label>
-            <input type="password" id="emp-clave-nueva" class="form-input" placeholder="Mínimo 4 caracteres">
+          <div id="backupStatus" style="display:none;font-size:12px;padding:6px 10px;border-radius:8px;margin-top:8px"></div>
+        </div>
+
+        <!-- ══ CLAVE EMPLEADOS (compacto) ══ -->
+        <div class="card" style="border:1px solid var(--accent);margin-top:12px;padding:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--accent)">🔒 Clave Modo Empleado</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">Protege inventario, caja y secciones sensibles</div>
+            </div>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('empClaveForm').style.display=document.getElementById('empClaveForm').style.display==='none'?'block':'none'">Cambiar clave</button>
           </div>
-          <div class="form-group">
-            <label class="form-label">Confirmar nueva clave</label>
-            <input type="password" id="emp-clave-confirmar" class="form-input" placeholder="Repite la nueva clave">
-          </div>
-          <button class="btn btn-primary" onclick="cambiarClaveEmpleado()">🔐 Guardar Clave</button>
-          <div style="margin-top:12px;padding:10px 12px;background:var(--bg2);border-radius:8px;font-size:12px;color:var(--text2)">
-            💡 <strong>Clave por defecto:</strong> <code style="color:var(--neon);font-family:var(--mono)">admin</code> — si nunca configuraste una, deja el campo "Clave actual" vacío.
+          <div id="empClaveForm" style="display:none">
+            <div id="empClaveStatus" style="display:none;padding:6px 10px;border-radius:8px;font-size:12px;margin-bottom:8px"></div>
+            <div style="display:grid;gap:8px">
+              <input type="password" id="emp-clave-actual" class="form-input" placeholder="Clave actual (vacío si es primera vez)" style="font-size:13px;padding:8px 12px">
+              <input type="password" id="emp-clave-nueva" class="form-input" placeholder="Nueva clave (mín. 4 caracteres)" style="font-size:13px;padding:8px 12px">
+              <input type="password" id="emp-clave-confirmar" class="form-input" placeholder="Confirmar nueva clave" style="font-size:13px;padding:8px 12px">
+              <button class="btn btn-primary btn-sm" onclick="cambiarClaveEmpleado()">🔐 Guardar clave</button>
+            </div>
           </div>
         </div>
 
         <!-- ══ ZONA DE PELIGRO ══ -->
-        <div class="card" style="border:2px solid #ef4444;margin-top:16px">
-          <div class="card-title mb-2" style="color:#ef4444">⚠️ Zona de Peligro</div>
-          <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
-            Estas acciones son irreversibles. Úsalas solo cuando quieras entregar la app limpia a un cliente.
-          </p>
-          <div style="display:flex;flex-wrap:wrap;gap:10px">
-            <button class="btn" style="background:#ef4444;color:#fff;font-weight:700" onclick="resetearDatos()">
-              🗑️ Borrar Ventas e Historial
-            </button>
-            <button class="btn" style="background:#ef4444;color:#fff;font-weight:700" onclick="resetearTodo()">
-              💣 Resetear App Completa
-            </button>
+        <div class="card" style="border:1px solid #ef4444;margin-top:12px;padding:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#ef4444">⚠️ Zona de Peligro</div>
+              <div style="font-size:11px;color:var(--text2);margin-top:2px">Acciones irreversibles — úsalas con cuidado</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="resetearDatos()">🗑️ Borrar Ventas</button>
+              <button class="btn btn-sm" style="background:#ef4444;color:#fff;font-weight:700" onclick="resetearTodo()">💣 Resetear Todo</button>
+            </div>
           </div>
         </div>
 
-      </div>
+        <!-- ══ PERIFÉRICOS Y HARDWARE ══ -->
+        <div class="card" style="margin-top:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="card-title">🔌 Periféricos y Hardware</div>
+            <span style="font-size:11px;color:var(--text3)">Chrome + HTTPS requerido</span>
+          </div>
+          <div class="hw-grid">
+            <div class="hw-card" id="hw-card-balanza">
+              <div class="hw-icon">⚖️</div>
+              <div class="hw-name">Balanza Digital</div>
+              <div class="hw-status" id="hw-st-balanza">Desconectada</div>
+              <button class="btn btn-ghost btn-sm" onclick="conectarBalanza()">Conectar</button>
+            </div>
+            <div class="hw-card" id="hw-card-gaveta">
+              <div class="hw-icon">💰</div>
+              <div class="hw-name">Gaveta de Dinero</div>
+              <div class="hw-status" id="hw-st-gaveta">Desconectada</div>
+              <button class="btn btn-ghost btn-sm" onclick="conectarGaveta()">Conectar</button>
+            </div>
+            <div class="hw-card" id="hw-card-datafono">
+              <div class="hw-icon">💳</div>
+              <div class="hw-name">Datafono / POS</div>
+              <div class="hw-status" id="hw-st-datafono">Requiere integración</div>
+              <button class="btn btn-ghost btn-sm" onclick="infoDatafono()">¿Cómo integrar?</button>
+            </div>
+            <div class="hw-card" id="hw-card-biopago">
+              <div class="hw-icon">🫆</div>
+              <div class="hw-name">BioPago</div>
+              <div class="hw-status" id="hw-st-biopago">Requiere integración</div>
+              <button class="btn btn-ghost btn-sm" onclick="infoBioPago()">¿Cómo integrar?</button>
+            </div>
+          </div>
+        </div>
 
-      <!-- PERIFÉRICOS Y HARDWARE -->
-      <div class="card" style="margin-top:20px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-          <div class="card-title">🔌 Periféricos y Hardware</div>
-          <span style="font-size:11px;color:var(--text3)">Chrome + HTTPS requerido para hardware serial</span>
-        </div>
-        <div class="hw-grid">
-          <div class="hw-card" id="hw-card-balanza">
-            <div class="hw-icon">⚖️</div>
-            <div class="hw-name">Balanza Digital</div>
-            <div class="hw-status" id="hw-st-balanza">Desconectada</div>
-            <button class="btn btn-ghost btn-sm" onclick="conectarBalanza()">Conectar</button>
+        <!-- ══ COLORES Y TEMA ══ -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-title" style="margin-bottom:4px;">🎨 Colores y Tema</div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">Elige un tema predefinido o personaliza los colores de la aplicación.</div>
+          <div id="temas-grid" class="temas-wrap"></div>
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🖌️ Personalizar colores</div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+            <div class="form-group" style="flex:1;min-width:130px;">
+              <label class="form-label">Sidebar</label>
+              <input type="color" id="color-sidebar" class="form-input" style="height:40px;padding:4px 6px;cursor:pointer;" oninput="previewColor('sidebar',this.value)">
+            </div>
+            <div class="form-group" style="flex:1;min-width:130px;">
+              <label class="form-label">Color Acento</label>
+              <input type="color" id="color-acento" class="form-input" style="height:40px;padding:4px 6px;cursor:pointer;" oninput="previewColor('acento',this.value)">
+            </div>
+            <div class="form-group" style="flex:1;min-width:130px;">
+              <label class="form-label">Botón Activo</label>
+              <input type="color" id="color-activo" class="form-input" style="height:40px;padding:4px 6px;cursor:pointer;" oninput="previewColor('activo',this.value)">
+            </div>
           </div>
-          <div class="hw-card" id="hw-card-gaveta">
-            <div class="hw-icon">💰</div>
-            <div class="hw-name">Gaveta de Dinero</div>
-            <div class="hw-status" id="hw-st-gaveta">Desconectada</div>
-            <button class="btn btn-ghost btn-sm" onclick="conectarGaveta()">Conectar</button>
-          </div>
-          <div class="hw-card" id="hw-card-datafono">
-            <div class="hw-icon">💳</div>
-            <div class="hw-name">Datafono / POS</div>
-            <div class="hw-status" id="hw-st-datafono">Requiere integración</div>
-            <button class="btn btn-ghost btn-sm" onclick="infoDatafono()">¿Cómo integrar?</button>
-          </div>
-          <div class="hw-card" id="hw-card-biopago">
-            <div class="hw-icon">🫆</div>
-            <div class="hw-name">BioPago</div>
-            <div class="hw-status" id="hw-st-biopago">Requiere integración</div>
-            <button class="btn btn-ghost btn-sm" onclick="infoBioPago()">¿Cómo integrar?</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="guardarColoresCustom()">💾 Aplicar Colores</button>
+            <button class="btn btn-ghost btn-sm" onclick="resetearColores()">↩ Restablecer</button>
           </div>
         </div>
-      </div>
 
-      <!-- COLORES Y TEMA -->
-      <div class="card" style="margin-top:20px;">
-        <div class="card-title" style="margin-bottom:4px;">🎨 Colores y Tema</div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:16px;">Elige un tema predefinido o personaliza los colores de la aplicación.</div>
-        <div id="temas-grid" class="temas-wrap"></div>
-        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;">🖌️ Personalizar colores</div>
-        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
-          <div class="form-group" style="flex:1;min-width:130px;">
-            <label class="form-label">Sidebar</label>
-            <input type="color" id="color-sidebar" class="form-input" style="height:40px;padding:4px 6px;cursor:pointer;" oninput="previewColor('sidebar',this.value)">
-          </div>
-          <div class="form-group" style="flex:1;min-width:130px;">
-            <label class="form-label">Color Acento</label>
-            <input type="color" id="color-acento" class="form-input" style="height:40px;padding:4px 6px;cursor:pointer;" oninput="previewColor('acento',this.value)">
-          </div>
-          <div class="form-group" style="flex:1;min-width:130px;">
-            <label class="form-label">Botón Activo</label>
-            <input type="color" id="color-activo" class="form-input" style="height:40px;padding:4px 6px;cursor:pointer;" oninput="previewColor('activo',this.value)">
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="guardarColoresCustom()">💾 Aplicar Colores</button>
-          <button class="btn btn-ghost btn-sm" onclick="resetearColores()">↩ Restablecer</button>
-        </div>
-      </div>
+      </div><!-- /page-configuracion -->
 
     </div><!-- /page-body -->
   </div><!-- /main -->
