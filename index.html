@@ -2211,47 +2211,48 @@ body.modo-empleado #emp-mode-badge{display:flex!important}
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- ══ CLAVE MODO EMPLEADO ══ -->
-      <div class="card" style="border:2px solid var(--accent);margin-top:16px">
-        <div class="card-title mb-1" style="color:var(--accent)">🔒 Clave de Bloqueo Empleados</div>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
-          Esta clave protege las secciones sensibles. Se pide cuando un empleado intenta desactivar el Modo Empleado o cerrar la caja.
-        </p>
-        <div id="empClaveStatus" style="display:none;padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:12px"></div>
-        <div class="form-group">
-          <label class="form-label">Clave actual</label>
-          <input type="password" id="emp-clave-actual" class="form-input" placeholder="Ingresa la clave actual para confirmar">
+        <!-- ══ CLAVE MODO EMPLEADO ══ -->
+        <div class="card" style="border:2px solid var(--accent);margin-top:16px">
+          <div class="card-title mb-1" style="color:var(--accent)">🔒 Clave de Bloqueo Empleados</div>
+          <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+            Esta clave protege las secciones sensibles. Se pide cuando un empleado intenta desactivar el Modo Empleado o cerrar la caja.
+          </p>
+          <div id="empClaveStatus" style="display:none;padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:12px"></div>
+          <div id="empClaveActualWrap" class="form-group">
+            <label class="form-label">Clave actual <span style="font-size:11px;color:var(--text2)">(dejar vacío si es primera vez)</span></label>
+            <input type="password" id="emp-clave-actual" class="form-input" placeholder="Vacío si nunca configuraste una clave">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nueva clave</label>
+            <input type="password" id="emp-clave-nueva" class="form-input" placeholder="Mínimo 4 caracteres">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Confirmar nueva clave</label>
+            <input type="password" id="emp-clave-confirmar" class="form-input" placeholder="Repite la nueva clave">
+          </div>
+          <button class="btn btn-primary" onclick="cambiarClaveEmpleado()">🔐 Guardar Clave</button>
+          <div style="margin-top:12px;padding:10px 12px;background:var(--bg2);border-radius:8px;font-size:12px;color:var(--text2)">
+            💡 <strong>Clave por defecto:</strong> <code style="color:var(--neon);font-family:var(--mono)">admin</code> — si nunca configuraste una, deja el campo "Clave actual" vacío.
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Nueva clave</label>
-          <input type="password" id="emp-clave-nueva" class="form-input" placeholder="Mínimo 4 caracteres">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Confirmar nueva clave</label>
-          <input type="password" id="emp-clave-confirmar" class="form-input" placeholder="Repite la nueva clave">
-        </div>
-        <button class="btn btn-primary" onclick="cambiarClaveEmpleado()">🔐 Guardar Clave</button>
-        <div style="margin-top:12px;padding:10px 12px;background:var(--bg2);border-radius:8px;font-size:12px;color:var(--text2)">
-          💡 <strong>Clave por defecto:</strong> <code style="color:var(--neon);font-family:var(--mono)">admin</code> — cámbiala antes de entregarle el teléfono al empleado.
-        </div>
-      </div>
 
-      <!-- ══ ZONA DE PELIGRO ══ -->
-      <div class="card" style="border:2px solid #ef4444;margin-top:16px">
-        <div class="card-title mb-2" style="color:#ef4444">⚠️ Zona de Peligro</div>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
-          Estas acciones son irreversibles. Úsalas solo cuando quieras entregar la app limpia a un cliente.
-        </p>
-        <div style="display:flex;flex-wrap:wrap;gap:10px">
-          <button class="btn" style="background:#ef4444;color:#fff;font-weight:700" onclick="resetearDatos()">
-            🗑️ Borrar Ventas e Historial
-          </button>
-          <button class="btn" style="background:#ef4444;color:#fff;font-weight:700" onclick="resetearTodo()">
-            💣 Resetear App Completa
-          </button>
+        <!-- ══ ZONA DE PELIGRO ══ -->
+        <div class="card" style="border:2px solid #ef4444;margin-top:16px">
+          <div class="card-title mb-2" style="color:#ef4444">⚠️ Zona de Peligro</div>
+          <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+            Estas acciones son irreversibles. Úsalas solo cuando quieras entregar la app limpia a un cliente.
+          </p>
+          <div style="display:flex;flex-wrap:wrap;gap:10px">
+            <button class="btn" style="background:#ef4444;color:#fff;font-weight:700" onclick="resetearDatos()">
+              🗑️ Borrar Ventas e Historial
+            </button>
+            <button class="btn" style="background:#ef4444;color:#fff;font-weight:700" onclick="resetearTodo()">
+              💣 Resetear App Completa
+            </button>
+          </div>
         </div>
+
       </div>
 
       <!-- PERIFÉRICOS Y HARDWARE -->
@@ -6483,6 +6484,22 @@ function abrirCobro() {
   var notasEl = document.getElementById('cobro-notas');
   if (notasEl) notasEl.value = '';
   openModal('modalCobro');
+  // Mostrar/ocultar panel Cashea según método seleccionado
+  var _esCashea = (STATE.payMethod || '') === 'Cashea';
+  var _esMixto  = (STATE.payMethod || '') === 'Pago Mixto';
+  var csEl = document.getElementById('casheaSection');
+  var mxEl = document.getElementById('mixtoPanelCobro');
+  var mrEl = document.getElementById('montoRecibido');
+  var mrWrap = mrEl ? mrEl.closest('.form-group') : null;
+  if (csEl) csEl.style.display = _esCashea ? 'block' : 'none';
+  if (mxEl) mxEl.style.display = _esMixto  ? 'block' : 'none';
+  if (mrWrap) mrWrap.style.display = _esCashea ? 'none' : '';
+  if (_esCashea) {
+    // Limpiar referencia y recalcular resumen
+    var refEl = document.getElementById('cashea-referencia');
+    if (refEl) refEl.value = '';
+    if (typeof calcCasheaResumen === 'function') calcCasheaResumen();
+  }
 }
 
 // alias para compatibilidad
@@ -9864,15 +9881,19 @@ function cambiarClaveEmpleado(){
     statusEl.style.border='1px solid '+(ok?'var(--neon)':'var(--danger)');
     statusEl.textContent=msg;
   }
-  if(getClaveEmpleado().indexOf(actual)<0){showStatus('❌ La clave actual es incorrecta',false);return;}
+  // Solo verifica clave actual si ya tenía una configurada
+  var tieneClavePersonal = !!localStorage.getItem('a2k_emp_clave');
+  if(tieneClavePersonal && getClaveEmpleado().indexOf(actual)<0){
+    showStatus('❌ La clave actual es incorrecta',false);return;
+  }
   if(!nueva||nueva.length<4){showStatus('❌ La nueva clave debe tener al menos 4 caracteres',false);return;}
   if(nueva!==confirma){showStatus('❌ Las claves no coinciden',false);return;}
   localStorage.setItem('a2k_emp_clave',nueva);
   ['emp-clave-actual','emp-clave-nueva','emp-clave-confirmar'].forEach(function(id){
     var el=document.getElementById(id);if(el)el.value='';
   });
-  showStatus('✅ Clave actualizada correctamente',true);
-  showToast('🔐 Clave de empleados actualizada','success');
+  showStatus('✅ Clave configurada correctamente — ahora el Modo Empleado usa esta clave',true);
+  showToast('🔐 Clave de empleados guardada','success');
 }
 function _verificarEmpPw(){
   var val=(document.getElementById('_empPwInput')||{}).value||'';
