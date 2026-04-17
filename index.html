@@ -2135,6 +2135,42 @@ body.modo-empleado #emp-mode-badge{display:flex!important}
           </div>
 
           <div>
+            <!-- ══ RESPALDO AUTOMÁTICO ══ -->
+            <div class="card mb-4">
+              <div class="card-title mb-3">📦 Respaldo Automático</div>
+              <div class="form-group">
+                <label class="form-label">Hora del Respaldo Diario</label>
+                <select id="cfg-backup-hora" class="form-select">
+                  <option value="19">7:00 PM</option>
+                  <option value="20">8:00 PM</option>
+                  <option value="21" selected>9:00 PM</option>
+                  <option value="22">10:00 PM</option>
+                  <option value="23">11:00 PM</option>
+                </select>
+              </div>
+              <div style="font-size:11px;color:var(--text2);margin-bottom:14px;line-height:1.6;background:rgba(255,255,255,0.03);padding:10px;border-radius:8px">
+                💡 Incluye inventario, clientes, ventas, fiados, caja y proveedores. La app descarga el archivo automáticamente.
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-primary btn-sm" onclick="saveBackupConfig()">💾 Guardar Hora</button>
+                <button class="btn btn-ghost btn-sm" onclick="hacerBackupManual()">📤 Respaldar Ahora</button>
+              </div>
+            </div>
+
+            <!-- ══ ACCESO BIOMÉTRICO ══ -->
+            <div class="card mb-4">
+              <div class="card-title mb-3">🔐 Acceso Biométrico</div>
+              <div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6">
+                Al regresar a la app después de que la pantalla se apague, desbloquea con tu <strong>huella digital</strong> o <strong>Face ID</strong> en un toque — sin escribir nada.
+              </div>
+              <div id="bio-status-cfg" style="font-size:12px;font-weight:700;margin-bottom:14px;padding:9px 12px;border-radius:8px;background:rgba(255,255,255,0.04)">⭕ Sin biométrico activo</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-primary btn-sm" onclick="registrarBiometrico()" id="btn-reg-bio">👆 Registrar Huella / Face ID</button>
+                <button class="btn btn-danger btn-sm" id="btn-borrar-bio" onclick="borrarBiometrico()" style="display:none">🗑️ Quitar</button>
+              </div>
+              <div style="font-size:10px;color:var(--text3);margin-top:8px">Requiere Chrome/Safari en HTTPS. Compatible con Android (huella) e iPhone (Face ID).</div>
+            </div>
+
             <div class="card mb-4">
               <div class="card-title mb-3">🎨 Apariencia</div>
               <div class="form-group">
@@ -5195,9 +5231,16 @@ function verFiado(id) {
     '<div class="card-title mb-2 mt-3">Historial de compras fiadas</div>' +
     (ventas.length
       ? ventas.slice(-5).reverse().map(function(v){
-          return '<div class="flex justify-between" style="padding:6px 0;border-bottom:1px solid var(--border)">' +
-            '<span style="font-size:12px">' + new Date(v.fecha).toLocaleDateString('es-VE') + '</span>' +
-            '<span class="text-accent font-bold">$' + v.totalUSD.toFixed(2) + '</span></div>';
+          return '<div style="padding:7px 0;border-bottom:1px solid var(--border)">' +
+            '<div class="flex justify-between" style="align-items:flex-start">' +
+              '<div>' +
+                '<span style="font-size:12px;color:var(--text2)">' + new Date(v.fecha).toLocaleDateString('es-VE') + '</span>' +
+                '<div style="font-size:11px;color:var(--text3)">' + (v.items||[]).map(function(i){ return i.nombre; }).join(', ').substring(0,40) + '</div>' +
+                (v.notas ? '<div style="font-size:11px;color:var(--accent);margin-top:3px">📝 ' + v.notas + '</div>' : '') +
+              '</div>' +
+              '<span class="text-accent font-bold" style="white-space:nowrap;margin-left:8px">$' + v.totalUSD.toFixed(2) + '</span>' +
+            '</div>' +
+          '</div>';
         }).join('')
       : '<p class="text-muted text-sm">Sin ventas fiadas</p>');
   document.getElementById('modalFiado').dataset.clienteId = id;
@@ -10004,5 +10047,196 @@ function calcCasheaResumen(){
   🔒 MODO EMPLEADO ACTIVO
   <button class="emp-unlock-btn" onclick="salirModoEmpleado()">🔓 Desbloquear</button>
 </div>
+
+<!-- ══════════════════ BIOMÉTRICO OVERLAY ══════════════════ -->
+<div id="bioOverlay" style="display:none;position:fixed;inset:0;background:rgba(8,8,15,0.97);z-index:99990;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;max-width:320px;width:100%;padding:28px">
+    <div style="font-size:64px;margin-bottom:8px" id="bio-overlay-icon">👆</div>
+    <div id="bio-negocio-name" style="font-size:17px;font-weight:800;color:var(--neon);margin-bottom:6px"></div>
+    <div id="bio-overlay-msg" style="font-size:14px;color:var(--text2);margin-bottom:28px">Toca el sensor de huella o usa Face ID</div>
+    <button onclick="verificarBiometrico()" style="width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--accent),var(--neon));color:#fff;font-size:16px;font-weight:800;cursor:pointer;margin-bottom:12px">
+      👆 Desbloquear
+    </button>
+    <button onclick="bioUsarClave()" style="background:none;border:1px solid rgba(255,255,255,0.1);color:var(--text2);padding:10px 20px;border-radius:10px;cursor:pointer;font-size:12px;width:100%">
+      🔑 Usar contraseña
+    </button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// RESPALDO AUTOMÁTICO + BIOMÉTRICO (Cloud)  —  A2K Digital Studio
+// ═══════════════════════════════════════════════════════════════
+
+// ─── RESPALDO ─────────────────────────────────────────────────
+var _backupTimerCloud = null;
+function initAutoBackup() {
+  if (_backupTimerCloud) clearInterval(_backupTimerCloud);
+  _backupTimerCloud = setInterval(function() {
+    var cfg  = (typeof DB !== 'undefined' ? DB.get('config') : null) || {};
+    var hora = parseInt(cfg.backupHora != null ? cfg.backupHora : 21);
+    var now  = new Date();
+    if (now.getHours() === hora && now.getMinutes() === 0) {
+      var hoy    = now.toDateString();
+      var ultimo = typeof DB !== 'undefined' ? DB.get('ultimo_backup_auto') : null;
+      if (ultimo !== hoy) {
+        if (typeof DB !== 'undefined') DB.set('ultimo_backup_auto', hoy);
+        _ejecutarBackupCloud(true);
+      }
+    }
+  }, 30000);
+}
+
+function _ejecutarBackupCloud(auto) {
+  var get = function(k){ return typeof DB !== 'undefined' ? (DB.get(k)||[]) : []; };
+  var data = {
+    productos:   get('productos'),   clientes:  get('clientes'),
+    ventas:      get('ventas'),      caja_movs: get('caja_movs'),
+    fiados:      get('fiados'),      proveedores:get('proveedores'),
+    config:      (typeof DB !== 'undefined' ? DB.get('config') : null)||{},
+    backupDate:  new Date().toISOString(), tipo: auto?'automatico':'manual', version:'BPC-Cloud'
+  };
+  var blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  var f = new Date().toLocaleDateString('es-VE').replace(/\//g,'-');
+  a.download = 'bodega-cloud-backup-'+(auto?'auto':'manual')+'-'+f+'.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  if(typeof showToast==='function') showToast(auto?'📦 Respaldo automático guardado':'📦 Respaldo descargado','success');
+}
+
+function saveBackupConfig() {
+  var h   = parseInt((document.getElementById('cfg-backup-hora')||{}).value||21);
+  var cfg = (typeof DB!=='undefined'?DB.get('config'):null)||{};
+  cfg.backupHora = h;
+  if(typeof DB!=='undefined') DB.set('config',cfg);
+  var names={19:'7 PM',20:'8 PM',21:'9 PM',22:'10 PM',23:'11 PM'};
+  if(typeof showToast==='function') showToast('⏰ Respaldo a las '+(names[h]||h+':00'),'success');
+}
+function hacerBackupManual(){ _ejecutarBackupCloud(false); }
+
+// ─── BIOMÉTRICO (WebAuthn) ─────────────────────────────────────
+var _bioActivo = false;
+
+function initBiometrico() {
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState !== 'visible') return;
+    var appEl   = document.getElementById('app');
+    var appOpen = appEl && appEl.style.display !== 'none';
+    if (!appOpen || _bioActivo) return;
+    var credId = typeof DB!=='undefined' ? DB.get('bio_cred_id') : null;
+    if (credId) mostrarBioOverlay();
+  });
+  actualizarEstadoBio();
+}
+
+function mostrarBioOverlay() {
+  _bioActivo = true;
+  var overlay = document.getElementById('bioOverlay');
+  if (!overlay) return;
+  var neg = (typeof STATE!=='undefined'&&STATE.user&&STATE.user.negocio)?STATE.user.negocio:'Bodega Pro Cloud';
+  var el  = document.getElementById('bio-negocio-name');
+  if (el) el.textContent = '🏪 '+neg;
+  var msg = document.getElementById('bio-overlay-msg');
+  if (msg) msg.textContent = 'Toca el sensor de huella o usa Face ID';
+  overlay.style.display = 'flex';
+}
+
+function cerrarBioOverlay() {
+  var overlay = document.getElementById('bioOverlay');
+  if (overlay) overlay.style.display = 'none';
+  _bioActivo = false;
+}
+
+async function registrarBiometrico() {
+  if (!window.PublicKeyCredential) {
+    if(typeof showToast==='function') showToast('⚠️ Tu navegador no soporta biométrico','warn'); return;
+  }
+  try {
+    var challenge = new Uint8Array(32); crypto.getRandomValues(challenge);
+    var userId    = new Uint8Array(16); crypto.getRandomValues(userId);
+    var negocio   = (typeof STATE!=='undefined'&&STATE.user)?STATE.user.negocio:'usuario';
+    var cred = await navigator.credentials.create({ publicKey: {
+      challenge, timeout: 60000,
+      rp: { name: 'Bodega Pro Cloud' },
+      user: { id: userId, name: negocio, displayName: negocio },
+      pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+      attestation: 'none'
+    }});
+    var credId = Array.from(new Uint8Array(cred.rawId));
+    if(typeof DB!=='undefined') DB.set('bio_cred_id', credId);
+    actualizarEstadoBio();
+    if(typeof showToast==='function') showToast('✅ Huella / Face ID registrado correctamente','success');
+  } catch(e) {
+    if(typeof showToast==='function') showToast('❌ No se pudo registrar: '+e.message,'err');
+  }
+}
+
+async function verificarBiometrico() {
+  var credId = typeof DB!=='undefined' ? DB.get('bio_cred_id') : null;
+  if (!credId) { cerrarBioOverlay(); return; }
+  try {
+    var challenge = new Uint8Array(32); crypto.getRandomValues(challenge);
+    await navigator.credentials.get({ publicKey: {
+      challenge, timeout: 60000,
+      allowCredentials: [{ id: new Uint8Array(credId), type: 'public-key' }],
+      userVerification: 'required'
+    }});
+    cerrarBioOverlay();
+  } catch(e) {
+    var msg = document.getElementById('bio-overlay-msg');
+    if (msg) msg.textContent = '❌ No reconocido. Intenta de nuevo.';
+  }
+}
+
+function borrarBiometrico() {
+  if(typeof DB!=='undefined') DB.del('bio_cred_id');
+  actualizarEstadoBio();
+  if(typeof showToast==='function') showToast('🗑️ Biométrico eliminado','success');
+}
+
+function bioUsarClave() {
+  cerrarBioOverlay();
+  if(typeof DB!=='undefined') DB.del('session');
+  var appEl   = document.getElementById('app');
+  var loginEl = document.getElementById('loginScreen');
+  if (appEl)   appEl.style.display   = 'none';
+  if (loginEl) loginEl.style.display = 'flex';
+}
+
+function actualizarEstadoBio() {
+  var credId   = typeof DB!=='undefined' ? DB.get('bio_cred_id') : null;
+  var statusEl = document.getElementById('bio-status-cfg');
+  var btnBorrar= document.getElementById('btn-borrar-bio');
+  var btnReg   = document.getElementById('btn-reg-bio');
+  if (statusEl) statusEl.innerHTML = credId
+    ? '<span style="color:var(--neon)">✅ Huella/Face ID activo — la app pedirá biométrico al regresar</span>'
+    : '<span style="color:var(--text2)">⭕ Sin biométrico activo</span>';
+  if (btnBorrar) btnBorrar.style.display = credId ? 'inline-flex' : 'none';
+  if (btnReg)    btnReg.textContent      = credId ? '🔄 Cambiar Biométrico' : '👆 Registrar Huella / Face ID';
+}
+
+// Hook en startApp de Cloud
+(function() {
+  var _origStart = window.startApp;
+  window.startApp = function() {
+    if (_origStart) _origStart.apply(this, arguments);
+    if (typeof initAutoBackup  === 'function') initAutoBackup();
+    if (typeof initBiometrico  === 'function') initBiometrico();
+  };
+  // Si ya cargo, init directo
+  if (document.getElementById('app') && document.getElementById('app').style.display !== 'none') {
+    setTimeout(function(){ initAutoBackup(); initBiometrico(); }, 500);
+  }
+})();
+
+window.saveBackupConfig    = saveBackupConfig;
+window.hacerBackupManual   = hacerBackupManual;
+window.registrarBiometrico = registrarBiometrico;
+window.verificarBiometrico = verificarBiometrico;
+window.borrarBiometrico    = borrarBiometrico;
+window.bioUsarClave        = bioUsarClave;
+</script>
+
 </body>
 </html>
