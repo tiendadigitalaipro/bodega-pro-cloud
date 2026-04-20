@@ -970,6 +970,39 @@ tbody tr:hover td{background:rgba(124,58,237,0.04)}
   background:var(--card);border:1px solid var(--border);border-radius:14px;
   display:flex;flex-direction:column;overflow:hidden;
 }
+/* ── MÓDULO VENTA POR GRAMOS ── */
+.gramos-panel{background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(6,214,160,0.05));border:1px solid rgba(124,58,237,0.25);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.gramos-panel-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.gramos-panel-title{font-family:var(--display);font-size:13px;font-weight:800;color:var(--accent2);letter-spacing:.5px;text-transform:uppercase}
+.gramos-prod-selector{display:flex;align-items:center;gap:10px;background:var(--bg2);border:1.5px dashed rgba(124,58,237,0.35);border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .2s,background .2s;margin-bottom:10px}
+.gramos-prod-selector:hover{border-color:var(--accent);background:rgba(124,58,237,0.08)}
+.gramos-prod-selector.selected{border-style:solid;border-color:var(--neon);background:rgba(6,214,160,0.06)}
+.gramos-prod-emoji{font-size:24px;flex-shrink:0}
+.gramos-prod-info{flex:1;min-width:0}
+.gramos-prod-name{font-weight:700;font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gramos-prod-price{font-size:11px;color:var(--neon);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.gramos-input-row{display:flex;align-items:flex-end;gap:10px}
+.gramos-field-wrap{flex:1}
+.gramos-label{font-size:11px;color:var(--text2);font-weight:600;display:block;margin-bottom:4px;letter-spacing:.3px;text-transform:uppercase}
+.gramos-input-group{display:flex;align-items:center;border:1.5px solid var(--border2);border-radius:10px;overflow:hidden;background:var(--bg);transition:border-color .2s}
+.gramos-input-group:focus-within{border-color:var(--accent)}
+.gramos-input{flex:1;padding:10px 12px;background:transparent;border:none;outline:none;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:800;text-align:center}
+.gramos-unit{padding:0 12px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--text2);background:var(--bg2);height:100%;display:flex;align-items:center;border-left:1px solid var(--border)}
+.gramos-add-btn{padding:10px 18px;background:linear-gradient(135deg,var(--accent),var(--neon));color:#fff;border:none;border-radius:10px;font-family:var(--display);font-size:13px;font-weight:800;cursor:pointer;transition:opacity .2s;white-space:nowrap;flex-shrink:0}
+.gramos-add-btn:disabled{opacity:.45;cursor:not-allowed}
+.gramos-add-btn:not(:disabled):hover{opacity:.88}
+.gramos-preview{background:var(--bg2);border-radius:10px;padding:9px 12px;margin:10px 0 0;display:none;border:1px dashed rgba(6,214,160,0.3)}
+.gramos-preview.visible{display:block}
+.gramos-preview-main{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:900;color:var(--neon);text-align:center}
+.gramos-preview-sub{font-size:11px;color:var(--text2);text-align:center;margin-top:2px}
+.cart-item.es-peso{border-left:3px solid var(--neon)}
+.cart-item-kg-badge{font-size:10px;background:rgba(6,214,160,0.15);color:var(--neon);border-radius:4px;padding:1px 5px;font-family:'JetBrains Mono',monospace;font-weight:700;margin-left:4px}
+.sel-kg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10100;display:flex;align-items:flex-end;justify-content:center}
+.sel-kg-sheet{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:20px;max-height:70vh;display:flex;flex-direction:column}
+.sel-kg-search{width:100%;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;margin-bottom:12px;outline:none}
+.sel-kg-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px}
+.sel-kg-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg2);border-radius:10px;cursor:pointer;border:1px solid transparent;transition:border-color .2s}
+.sel-kg-item:hover{border-color:var(--accent)}
 .search-bar{
   display:flex;gap:8px;margin-bottom:14px;
 }
@@ -1793,10 +1826,45 @@ body.modo-empleado #emp-mode-badge{display:flex!important}
               <div class="scale-display" id="scaleDisplay">0.000 kg</div>
               <div class="scale-subtotal" id="scaleSubtotal">Selecciona un producto de precio/kg</div>
             </div>
+            <!-- ⚖️ PANEL VENTA POR GRAMOS -->
+            <div class="gramos-panel" id="gramosPanel" style="display:none">
+              <div class="gramos-panel-header">
+                <span style="font-size:18px" id="gramosPanelIcon">⚖️</span>
+                <span class="gramos-panel-title" id="gramosPanelTitle">Venta por Peso / Volumen</span>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:6px;margin-right:8px">
+                  <button id="btnModeGr" onclick="setGramosMode('gr')" style="padding:3px 10px;border-radius:20px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:11px;font-weight:800;cursor:pointer;transition:all .2s">gr</button>
+                  <button id="btnModeMl" onclick="setGramosMode('ml')" style="padding:3px 10px;border-radius:20px;border:1.5px solid var(--border2);background:transparent;color:var(--text2);font-size:11px;font-weight:800;cursor:pointer;transition:all .2s">ml</button>
+                </div>
+                <button onclick="cerrarGramosPanel()" style="background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;line-height:1">×</button>
+              </div>
+              <div class="gramos-prod-selector" id="gramosProdSelector" onclick="abrirSelectorProductoKg()">
+                <span class="gramos-prod-emoji" id="gramosProdEmoji">📦</span>
+                <div class="gramos-prod-info">
+                  <div class="gramos-prod-name" id="gramosProdNombre">Toca para seleccionar producto</div>
+                  <div class="gramos-prod-price" id="gramosProdPrecio">Precio no asignado</div>
+                </div>
+                <span style="font-size:18px;color:var(--text3)">›</span>
+              </div>
+              <div class="gramos-input-row">
+                <div class="gramos-field-wrap">
+                  <span class="gramos-label" id="gramosInputLabel">Cantidad en gramos</span>
+                  <div class="gramos-input-group">
+                    <input type="number" class="gramos-input" id="gramosInput" min="1" placeholder="0" oninput="calcGramosPreview()" onkeydown="if(event.key==='Enter')agregarGramosAlCarrito()">
+                    <span class="gramos-unit" id="gramosUnitLabel">gr</span>
+                  </div>
+                </div>
+                <button class="gramos-add-btn" id="gramosAddBtn" onclick="agregarGramosAlCarrito()" disabled>➕ Agregar</button>
+              </div>
+              <div class="gramos-preview" id="gramosPreview">
+                <div class="gramos-preview-main" id="gramosPreviewPrecio">$0.00</div>
+                <div class="gramos-preview-sub" id="gramosPreviewDesc">— gr = — kg × $—/kg</div>
+              </div>
+            </div>
             <div class="search-bar">
               <input type="text" class="search-input" placeholder="🔍 Buscar producto o código..." id="posSearch" oninput="renderPosProducts()">
               <button class="btn btn-outline btn-sm" id="btnQRPos" onclick="openQRScanner(&#39;pos&#39;)" title="Escanear código de barras">📷 QR</button>
               <button class="btn btn-outline btn-sm" onclick="openAddProduct()">+ Producto</button>
+              <button class="btn btn-sm" style="background:rgba(124,58,237,0.18);color:var(--accent2);font-weight:700;border:1px solid rgba(124,58,237,0.35);border-radius:8px;padding:4px 10px;font-size:13px;cursor:pointer" onclick="toggleGramosPanel()" title="Venta por gramos/peso">⚖️ Pesaje</button>
               <button class="btn btn-sm" style="background:var(--warn);color:#000;font-weight:700;border:none;border-radius:8px;padding:4px 10px;font-size:13px;cursor:pointer" onclick="abrirCobroRapido()" title="Cobrar producto sin registrar">⚡ Cobro Rápido</button>
             </div>
             <div class="cat-filters" id="catFilters"></div>
@@ -3918,9 +3986,11 @@ function addToCart(prodId) {
   const prods = DB.get('productos') || [];
   const prod = prods.find(p => p.id === prodId);
   if (!prod || prod.stock === 0) return;
-  // Si es producto pesado (kg o lt), mostrar modal de cantidad
+  // Si es producto pesado (kg o lt), abrir panel gramos
   if (prod.unidad === 'kg' || prod.unidad === 'lt') {
-    abrirModalPeso(prod);
+    var panel = document.getElementById('gramosPanel');
+    if (panel && panel.style.display === 'none') panel.style.display = 'block';
+    seleccionarProdKg(prodId);
     return;
   }
   const existing = STATE.cart.find(i => i.productoId === prodId);
@@ -3934,78 +4004,238 @@ function addToCart(prodId) {
   renderCart();
 }
 
-function abrirModalPeso(prod) {
-  var esKg = prod.unidad === 'kg';
-  var unidadLabel = esKg ? 'gramos (g)' : 'mililitros (ml)';
-  var factor = 1000; // 1 kg = 1000g, 1 lt = 1000ml
-  var existing = document.getElementById('modalPeso');
-  if (existing) existing.remove();
+var GRAMOS_STATE = { prodId: null, nombre: '', emoji: '📦', precio: 0, modo: 'gr' };
 
-  var modal = document.createElement('div');
-  modal.id = 'modalPeso';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center';
-  modal.innerHTML = `
-    <div style="background:var(--card);border-radius:16px;padding:28px;width:320px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
-      <div style="text-align:center;margin-bottom:20px">
-        <div style="font-size:36px">${prod.emoji||'⚖️'}</div>
-        <div style="font-weight:700;font-size:16px;color:var(--text1);margin-top:8px">${prod.nombre}</div>
-        <div style="font-size:13px;color:var(--text2);margin-top:4px">$${prod.precio.toFixed(2)} / ${prod.unidad}</div>
-      </div>
-      <div style="margin-bottom:16px">
-        <label style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Cantidad en ${unidadLabel}</label>
-        <input type="number" id="pesoInput" min="1" max="${prod.unidad==='kg'?prod.stock*1000:prod.stock*1000}" placeholder="Ej: 300" step="1"
-          style="width:100%;margin-top:8px;padding:14px;font-size:22px;font-weight:700;text-align:center;border:2px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text1);outline:none"
-          oninput="calcularPrevioPeso(${prod.precio},${factor})">
-        <div id="pesoPreview" style="text-align:center;margin-top:10px;font-size:15px;color:var(--text2)">Ingresa la cantidad</div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        ${[100,200,250,300,500,750].map(v=>`<button onclick="document.getElementById('pesoInput').value=${v};calcularPrevioPeso(${prod.precio},${factor})" style="padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text1);cursor:pointer;font-size:13px;font-weight:600">${v}${esKg?'g':'ml'}</button>`).join('')}
-      </div>
-      <div style="display:flex;gap:10px">
-        <button onclick="document.getElementById('modalPeso').remove()" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text1);cursor:pointer;font-size:14px">Cancelar</button>
-        <button onclick="confirmarPeso(${prod.id},${prod.precio},${factor},'${prod.unidad}')" style="flex:2;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer;font-size:14px;font-weight:700">✅ Agregar al carrito</button>
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-  setTimeout(function(){ var inp=document.getElementById('pesoInput'); if(inp) inp.focus(); }, 100);
+function setGramosMode(modo) {
+  GRAMOS_STATE.modo = modo;
+  var btnGr = document.getElementById('btnModeGr');
+  var btnMl = document.getElementById('btnModeMl');
+  if (btnGr && btnMl) {
+    if (modo === 'gr') {
+      btnGr.style.background = 'var(--accent)'; btnGr.style.borderColor = 'var(--accent)'; btnGr.style.color = '#fff';
+      btnMl.style.background = 'transparent'; btnMl.style.borderColor = 'var(--border2)'; btnMl.style.color = 'var(--text2)';
+    } else {
+      btnMl.style.background = 'var(--neonb)'; btnMl.style.borderColor = 'var(--neonb)'; btnMl.style.color = '#fff';
+      btnGr.style.background = 'transparent'; btnGr.style.borderColor = 'var(--border2)'; btnGr.style.color = 'var(--text2)';
+    }
+  }
+  var unitLbl = document.getElementById('gramosUnitLabel');
+  var inputLbl = document.getElementById('gramosInputLabel');
+  var panelIcon = document.getElementById('gramosPanelIcon');
+  if (unitLbl) unitLbl.textContent = modo === 'gr' ? 'gr' : 'ml';
+  if (inputLbl) inputLbl.textContent = modo === 'gr' ? 'Cantidad en gramos' : 'Cantidad en mililitros';
+  if (panelIcon) panelIcon.textContent = modo === 'gr' ? '⚖️' : '🧴';
+  if (GRAMOS_STATE.prodId) {
+    var unidBase = modo === 'gr' ? 'kg' : 'lt';
+    stext('gramosProdPrecio', '$' + GRAMOS_STATE.precio.toFixed(2) + ' por ' + unidBase);
+  }
+  calcGramosPreview();
 }
 
-function calcularPrevioPeso(precioPorUnidad, factor) {
-  var inp = document.getElementById('pesoInput');
-  var prev = document.getElementById('pesoPreview');
-  if (!inp || !prev) return;
-  var cantidad = parseFloat(inp.value) || 0;
-  var precio = (precioPorUnidad * cantidad) / factor;
-  prev.innerHTML = cantidad > 0
-    ? '<strong style="font-size:20px;color:var(--accent)">$' + precio.toFixed(2) + '</strong>'
-    : 'Ingresa la cantidad';
+function toggleGramosPanel() {
+  var p = document.getElementById('gramosPanel');
+  if (!p) return;
+  if (p.style.display === 'none' || !p.style.display) {
+    p.style.display = 'block';
+    var inp = document.getElementById('gramosInput');
+    if (inp) { inp.value = ''; inp.focus(); }
+    var prev = document.getElementById('gramosPreview');
+    if (prev) prev.classList.remove('visible');
+    var btn = document.getElementById('gramosAddBtn');
+    if (btn) btn.disabled = true;
+  } else {
+    cerrarGramosPanel();
+  }
 }
 
-function confirmarPeso(prodId, precioPorUnidad, factor, unidad) {
-  var inp = document.getElementById('pesoInput');
-  var cantidad = parseFloat(inp ? inp.value : 0) || 0;
-  if (cantidad <= 0) return showToast('⚠️ Ingresa una cantidad válida','warn');
-  var prods = DB.get('productos') || [];
-  var prod = prods.find(p => p.id === prodId);
-  if (!prod) return;
-  var precioFinal = (precioPorUnidad * cantidad) / factor;
-  var etiqueta = cantidad + (unidad === 'kg' ? 'g' : 'ml');
-  var nombreConPeso = prod.nombre + ' (' + etiqueta + ')';
-  // Usar ID único para permitir mismo producto con distintos pesos
-  var itemId = prodId + '_' + Date.now();
-  STATE.cart.push({
-    productoId: itemId,
-    productoIdReal: prodId,
-    nombre: nombreConPeso,
-    emoji: prod.emoji,
-    precio: precioFinal,
-    qty: 1,
-    subtotal: precioFinal,
-    esPesado: true
-  });
-  document.getElementById('modalPeso').remove();
+function cerrarGramosPanel() {
+  var p = document.getElementById('gramosPanel');
+  if (p) p.style.display = 'none';
+  GRAMOS_STATE = { prodId: null, nombre: '', emoji: '📦', precio: 0, modo: 'gr' };
+  var sel = document.getElementById('gramosProdSelector');
+  if (sel) sel.classList.remove('selected');
+  stext('gramosProdNombre', 'Toca para seleccionar producto');
+  stext('gramosProdPrecio', 'Precio no asignado');
+  stext('gramosProdEmoji', '📦');
+  setGramosMode('gr');
+  var inp = document.getElementById('gramosInput');
+  if (inp) inp.value = '';
+  var prev = document.getElementById('gramosPreview');
+  if (prev) prev.classList.remove('visible');
+  var btn = document.getElementById('gramosAddBtn');
+  if (btn) btn.disabled = true;
+}
+
+function abrirSelectorProductoKg() {
+  var existente = document.getElementById('modalSelKg');
+  if (existente) existente.remove();
+  var todosProds = DB.get('productos') || [];
+  var prods = todosProds.filter(function(p){ return (p.stock||0) > 0; });
+  if (!prods.length) { showToast('⚠️ No hay productos con stock disponible.','warn'); return; }
+  var overlay = document.createElement('div');
+  overlay.id = 'modalSelKg';
+  overlay.className = 'sel-kg-overlay';
+  overlay.innerHTML = '<div class="sel-kg-sheet">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
+      '<span style="font-family:var(--display);font-size:15px;font-weight:800;color:var(--accent2)">⚖️ Seleccionar producto por kg</span>' +
+      '<button onclick="document.getElementById(\'modalSelKg\').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text2);z-index:20000">×</button>' +
+    '</div>' +
+    '<input class="sel-kg-search" id="selKgSearch" type="text" placeholder="🔍 Buscar producto..." oninput="renderSelKgList()">' +
+    '<div class="sel-kg-list" id="selKgList"></div>' +
+  '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+  renderSelKgList();
+  setTimeout(function(){ var s=document.getElementById('selKgSearch'); if(s) s.focus(); }, 100);
+}
+
+function renderSelKgList() {
+  var q = (document.getElementById('selKgSearch') || {}).value || '';
+  q = q.toLowerCase().trim();
+  var todosProds = DB.get('productos') || [];
+  var prods = todosProds.filter(function(p){ return (p.stock||0) > 0; });
+  if (q) prods = prods.filter(function(p){ return p.nombre.toLowerCase().includes(q); });
+  var list = document.getElementById('selKgList');
+  if (!list) return;
+  if (!prods.length) {
+    list.innerHTML = '<div style="text-align:center;color:var(--text2);padding:20px">No se encontraron productos</div>';
+    return;
+  }
+  list.innerHTML = prods.map(function(p){
+    var pKg = p.precioKg || p.precio;
+    var unidLbl = p.unidad === 'kg' ? '/kg' : ('/'+( p.unidad||'und'));
+    var stockLbl = (p.stock||0) + ' ' + (p.unidad||'und');
+    return '<div class="sel-kg-item" onclick="seleccionarProdKg(' + p.id + ')">' +
+      '<span style="font-size:22px">' + (p.emoji || '📦') + '</span>' +
+      '<div style="flex:1">' +
+        '<div style="font-weight:700;font-size:14px">' + p.nombre + '</div>' +
+        '<div style="font-size:12px;color:var(--neon);font-family:\'JetBrains Mono\',monospace">$' + pKg.toFixed(2) + unidLbl + ' · Stock: ' + stockLbl + '</div>' +
+      '</div>' +
+      '<span style="color:var(--text3);font-size:18px">›</span>' +
+    '</div>';
+  }).join('');
+}
+
+function seleccionarProdKg(prodId) {
+  var pid = typeof prodId === 'string' ? (isNaN(prodId) ? prodId : parseInt(prodId, 10)) : prodId;
+  var todosProds = DB.get('productos') || [];
+  var prod = todosProds.find(function(p){ return p.id === pid; });
+  if (!prod) { showToast('⚠️ Producto no encontrado','warn'); return; }
+  var pKg = prod.precioKg || prod.precio;
+  var panel = document.getElementById('gramosPanel');
+  if (panel && panel.style.display === 'none') panel.style.display = 'block';
+  GRAMOS_STATE.prodId = pid;
+  GRAMOS_STATE.nombre = prod.nombre;
+  GRAMOS_STATE.emoji = prod.emoji || '📦';
+  GRAMOS_STATE.precio = pKg;
+  var autoModo = (prod.unidad === 'lt' || prod.unidad === 'l' || prod.unidad === 'litro') ? 'ml' : 'gr';
+  GRAMOS_STATE.modo = autoModo;
+  setGramosMode(autoModo);
+  stext('gramosProdEmoji', GRAMOS_STATE.emoji);
+  stext('gramosProdNombre', GRAMOS_STATE.nombre);
+  var unidBase = autoModo === 'ml' ? 'lt' : 'kg';
+  stext('gramosProdPrecio', '$' + pKg.toFixed(2) + ' por ' + unidBase);
+  var sel = document.getElementById('gramosProdSelector');
+  if (sel) sel.classList.add('selected');
+  var m = document.getElementById('modalSelKg');
+  if (m) m.remove();
+  var inp = document.getElementById('gramosInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+  var prev = document.getElementById('gramosPreview');
+  if (prev) prev.classList.remove('visible');
+  var btn = document.getElementById('gramosAddBtn');
+  if (btn) btn.disabled = true;
+}
+
+function calcGramosPreview() {
+  var inp = document.getElementById('gramosInput');
+  var cantidad = inp ? parseFloat(inp.value) : 0;
+  var btn = document.getElementById('gramosAddBtn');
+  var prev = document.getElementById('gramosPreview');
+  var prevPrecio = document.getElementById('gramosPreviewPrecio');
+  var prevDesc = document.getElementById('gramosPreviewDesc');
+  if (!GRAMOS_STATE.prodId || !cantidad || cantidad <= 0) {
+    if (prev) prev.classList.remove('visible');
+    if (btn) btn.disabled = true;
+    return;
+  }
+  var esMl = GRAMOS_STATE.modo === 'ml';
+  var unidBase = cantidad / 1000;
+  var total = unidBase * GRAMOS_STATE.precio;
+  if (prevPrecio) prevPrecio.textContent = '$' + total.toFixed(2);
+  if (esMl) {
+    if (prevDesc) prevDesc.textContent = cantidad + ' ml = ' + unidBase.toFixed(3) + ' lt × $' + GRAMOS_STATE.precio.toFixed(2) + '/lt';
+  } else {
+    if (prevDesc) prevDesc.textContent = cantidad + ' gr = ' + unidBase.toFixed(3) + ' kg × $' + GRAMOS_STATE.precio.toFixed(2) + '/kg';
+  }
+  if (prev) prev.classList.add('visible');
+  if (btn) btn.disabled = false;
+}
+
+function agregarGramosAlCarrito() {
+  if (!GRAMOS_STATE.prodId) { showToast('⚠️ Selecciona un producto primero','warn'); return; }
+  var inp = document.getElementById('gramosInput');
+  var cantidad = inp ? parseFloat(inp.value) : 0;
+  var esMl = GRAMOS_STATE.modo === 'ml';
+  if (!cantidad || cantidad <= 0) { showToast('⚠️ Ingresa ' + (esMl ? 'los mililitros' : 'los gramos'), 'warn'); return; }
+  var unidBase = parseFloat((cantidad / 1000).toFixed(4));
+  var total = parseFloat((unidBase * GRAMOS_STATE.precio).toFixed(2));
+  var cantLabel = esMl ? 'ml' : 'gr';
+  var todosP = DB.get('productos') || [];
+  var prod = todosP.find(function(p){ return p.id === GRAMOS_STATE.prodId; });
+  if (prod && prod.stock !== undefined && prod.stock !== null && prod.stock > 0) {
+    if (unidBase > prod.stock) {
+      showToast('⚠️ Stock insuficiente. Disponible: ' + prod.stock + ' ' + (prod.unidad || (esMl?'lt':'kg')), 'warn');
+      return;
+    }
+  }
+  var existente = STATE.cart.find(function(i){ return i.productoId === GRAMOS_STATE.prodId && i.esPeso && i.esMl === esMl; });
+  if (existente) {
+    var cantAnterior = existente.gramos || Math.round(existente.qty * 1000);
+    existente.gramos = cantAnterior + cantidad;
+    existente.qty = parseFloat((existente.gramos / 1000).toFixed(4));
+    existente.subtotal = parseFloat((existente.qty * existente.precio).toFixed(2));
+  } else {
+    STATE.cart.push({
+      productoId: GRAMOS_STATE.prodId,
+      nombre: GRAMOS_STATE.nombre,
+      emoji: GRAMOS_STATE.emoji,
+      precio: GRAMOS_STATE.precio,
+      qty: unidBase,
+      gramos: cantidad,
+      esMl: esMl,
+      subtotal: total,
+      esPeso: true
+    });
+  }
   renderCart();
-  showToast('✅ ' + nombreConPeso + ' — $' + precioFinal.toFixed(2), 'ok');
+  if (inp) inp.value = '';
+  var prev = document.getElementById('gramosPreview');
+  if (prev) prev.classList.remove('visible');
+  var btn = document.getElementById('gramosAddBtn');
+  if (btn) btn.disabled = true;
+  showToast('✅ ' + cantidad + ' ' + cantLabel + ' de ' + GRAMOS_STATE.nombre + ' → $' + total.toFixed(2), 'success');
+}
+
+function changeQtyGramos(prodId, delta, esMl) {
+  var pid = typeof prodId === 'string' ? (isNaN(prodId) ? prodId : parseInt(prodId,10)) : prodId;
+  var item = STATE.cart.find(function(i){ return i.productoId === pid && i.esPeso && (i.esMl === !!esMl); });
+  if (!item) item = STATE.cart.find(function(i){ return i.productoId === pid && i.esPeso; });
+  if (!item) return;
+  var nuevaCant = (item.gramos || Math.round(item.qty * 1000)) + delta;
+  if (nuevaCant <= 0) { removeFromCart(pid); return; }
+  if (delta > 0) {
+    var todosP2 = DB.get('productos') || [];
+    var prod = todosP2.find(function(p){ return p.id === pid; });
+    if (prod && prod.stock !== undefined && prod.stock !== null) {
+      var nuevoBase = nuevaCant / 1000;
+      if (nuevoBase > prod.stock) { showToast('⚠️ Stock máximo alcanzado','warn'); return; }
+    }
+  }
+  item.gramos = nuevaCant;
+  item.qty = parseFloat((nuevaCant / 1000).toFixed(4));
+  item.subtotal = parseFloat((item.qty * item.precio).toFixed(2));
+  renderCart();
 }
 
 function renderCart() {
