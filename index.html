@@ -3918,6 +3918,11 @@ function addToCart(prodId) {
   const prods = DB.get('productos') || [];
   const prod = prods.find(p => p.id === prodId);
   if (!prod || prod.stock === 0) return;
+  // Si es producto pesado (kg o lt), mostrar modal de cantidad
+  if (prod.unidad === 'kg' || prod.unidad === 'lt') {
+    abrirModalPeso(prod);
+    return;
+  }
   const existing = STATE.cart.find(i => i.productoId === prodId);
   if (existing) {
     if (existing.qty >= prod.stock) return showToast('⚠️ Stock insuficiente','warn');
@@ -3927,6 +3932,80 @@ function addToCart(prodId) {
     STATE.cart.push({ productoId: prodId, nombre: prod.nombre, emoji: prod.emoji, precio: prod.precio, qty: 1, subtotal: prod.precio });
   }
   renderCart();
+}
+
+function abrirModalPeso(prod) {
+  var esKg = prod.unidad === 'kg';
+  var unidadLabel = esKg ? 'gramos (g)' : 'mililitros (ml)';
+  var factor = 1000; // 1 kg = 1000g, 1 lt = 1000ml
+  var existing = document.getElementById('modalPeso');
+  if (existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'modalPeso';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:99999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--card);border-radius:16px;padding:28px;width:320px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:36px">${prod.emoji||'⚖️'}</div>
+        <div style="font-weight:700;font-size:16px;color:var(--text1);margin-top:8px">${prod.nombre}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:4px">$${prod.precio.toFixed(2)} / ${prod.unidad}</div>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Cantidad en ${unidadLabel}</label>
+        <input type="number" id="pesoInput" min="1" max="${prod.unidad==='kg'?prod.stock*1000:prod.stock*1000}" placeholder="Ej: 300" step="1"
+          style="width:100%;margin-top:8px;padding:14px;font-size:22px;font-weight:700;text-align:center;border:2px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text1);outline:none"
+          oninput="calcularPrevioPeso(${prod.precio},${factor})">
+        <div id="pesoPreview" style="text-align:center;margin-top:10px;font-size:15px;color:var(--text2)">Ingresa la cantidad</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        ${[100,200,250,300,500,750].map(v=>`<button onclick="document.getElementById('pesoInput').value=${v};calcularPrevioPeso(${prod.precio},${factor})" style="padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text1);cursor:pointer;font-size:13px;font-weight:600">${v}${esKg?'g':'ml'}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('modalPeso').remove()" style="flex:1;padding:12px;border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text1);cursor:pointer;font-size:14px">Cancelar</button>
+        <button onclick="confirmarPeso(${prod.id},${prod.precio},${factor},'${prod.unidad}')" style="flex:2;padding:12px;border:none;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer;font-size:14px;font-weight:700">✅ Agregar al carrito</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  setTimeout(function(){ var inp=document.getElementById('pesoInput'); if(inp) inp.focus(); }, 100);
+}
+
+function calcularPrevioPeso(precioPorUnidad, factor) {
+  var inp = document.getElementById('pesoInput');
+  var prev = document.getElementById('pesoPreview');
+  if (!inp || !prev) return;
+  var cantidad = parseFloat(inp.value) || 0;
+  var precio = (precioPorUnidad * cantidad) / factor;
+  prev.innerHTML = cantidad > 0
+    ? '<strong style="font-size:20px;color:var(--accent)">$' + precio.toFixed(2) + '</strong>'
+    : 'Ingresa la cantidad';
+}
+
+function confirmarPeso(prodId, precioPorUnidad, factor, unidad) {
+  var inp = document.getElementById('pesoInput');
+  var cantidad = parseFloat(inp ? inp.value : 0) || 0;
+  if (cantidad <= 0) return showToast('⚠️ Ingresa una cantidad válida','warn');
+  var prods = DB.get('productos') || [];
+  var prod = prods.find(p => p.id === prodId);
+  if (!prod) return;
+  var precioFinal = (precioPorUnidad * cantidad) / factor;
+  var etiqueta = cantidad + (unidad === 'kg' ? 'g' : 'ml');
+  var nombreConPeso = prod.nombre + ' (' + etiqueta + ')';
+  // Usar ID único para permitir mismo producto con distintos pesos
+  var itemId = prodId + '_' + Date.now();
+  STATE.cart.push({
+    productoId: itemId,
+    productoIdReal: prodId,
+    nombre: nombreConPeso,
+    emoji: prod.emoji,
+    precio: precioFinal,
+    qty: 1,
+    subtotal: precioFinal,
+    esPesado: true
+  });
+  document.getElementById('modalPeso').remove();
+  renderCart();
+  showToast('✅ ' + nombreConPeso + ' — $' + precioFinal.toFixed(2), 'ok');
 }
 
 function renderCart() {
@@ -3978,9 +4057,11 @@ function renderCart() {
 
 function changeQty(prodId, delta) {
   const prods = DB.get('productos') || [];
-  const prod = prods.find(p => p.id === prodId);
   const item = STATE.cart.find(i => i.productoId === prodId);
   if (!item) return;
+  // Items pesados: no cambiar qty (ya tienen precio exacto), solo eliminar
+  if (item.esPesado) return;
+  const prod = prods.find(p => p.id === prodId);
   item.qty = Math.max(1, Math.min(item.qty + delta, prod ? prod.stock : 999));
   item.subtotal = item.qty * item.precio;
   renderCart();
