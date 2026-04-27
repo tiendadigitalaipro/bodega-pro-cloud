@@ -474,6 +474,13 @@ select.form-input{cursor:pointer}
       <label class="form-label">Notas</label>
       <input type="text" id="e-notas" class="form-input" placeholder="Observaciones...">
     </div>
+    <div class="form-group" style="border:1px solid #7c3aed33;border-radius:10px;padding:12px;background:#7c3aed11">
+      <label class="form-label" style="color:#a78bfa">🖥️ Cambio de Equipo (Device ID)</label>
+      <div id="e-device-actual" style="font-size:11px;color:#888;margin-bottom:6px;font-family:monospace"></div>
+      <input type="text" id="e-nuevo-device" class="form-input" placeholder="Nuevo Device ID — dejar vacío para solo liberar el equipo"
+        style="font-family:monospace;font-size:12px;text-transform:uppercase">
+      <div style="font-size:10px;color:#888;margin-top:4px">⚠️ Al guardar con nuevo Device ID, el equipo anterior queda desvinculado. Si lo dejas vacío, liberas el equipo sin asignar uno nuevo.</div>
+    </div>
     <input type="hidden" id="e-id">
     <div class="modal-footer">
       <button class="btn-cancel" onclick="cerrarEditar()">Cancelar</button>
@@ -833,6 +840,12 @@ window.abrirEditar = function(id) {
   document.getElementById('e-email').value    = lic.email || '';
   document.getElementById('e-notas').value    = lic.notas || '';
   document.getElementById('e-id').value       = id;
+  // Mostrar device actual y limpiar campo nuevo device
+  var devActual = lic.deviceId || lic.deviceLocked || '';
+  var devEl = document.getElementById('e-device-actual');
+  if (devEl) devEl.textContent = devActual ? ('Equipo actual: ' + devActual) : 'Sin equipo registrado';
+  var devInp = document.getElementById('e-nuevo-device');
+  if (devInp) devInp.value = '';
   if (esDemo) {
     document.getElementById('e-dias-demo').value = String(lic.plan || 3);
     document.getElementById('e-grupo-dias').style.display = 'block';
@@ -870,11 +883,20 @@ window.guardarEdicion = async function() {
   try {
     var nuevaVenc = new Date(lic.fechaInicio);
     nuevaVenc.setDate(nuevaVenc.getDate() + plan);
-    await updateDoc(doc(db, 'licencias', id), {
+    var nuevoDevice = (document.getElementById('e-nuevo-device').value || '').trim().toUpperCase();
+    var updateData = {
       nombreCliente: nombre, negocio, telefono, email,
       plan, terminales, notas,
       fechaVencimiento: nuevaVenc.toISOString()
-    });
+    };
+    // Si escribió nuevo device o quiere liberar — actualizar campo
+    var deviceInputEl = document.getElementById('e-nuevo-device');
+    if (deviceInputEl !== null) {
+      updateData.deviceId = nuevoDevice || null;
+      updateData.deviceLocked = nuevoDevice || null;
+      updateData.devices = nuevoDevice ? [nuevoDevice] : [];
+    }
+    await updateDoc(doc(db, 'licencias', id), updateData);
     cerrarEditar();
     await cargarLicencias();
   } catch(e) {
